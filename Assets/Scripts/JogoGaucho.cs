@@ -31,6 +31,12 @@ public sealed class JogoGaucho : MonoBehaviour
         public float criadoEm;
     }
 
+    struct TorrePendente
+    {
+        public Transform transform;
+        public TipoTorreGaucha tipo;
+    }
+
     const int TotalOndas = 6;
     const int CustoRevolver = 90;
     const int CustoEspingarda = 130;
@@ -39,6 +45,7 @@ public sealed class JogoGaucho : MonoBehaviour
     readonly List<ModeloInimigo> modelosInimigo = new List<ModeloInimigo>();
     readonly HashSet<InimigoGaucho> inimigosAtivos = new HashSet<InimigoGaucho>();
     readonly List<TorreGaucha> torres = new List<TorreGaucha>();
+    readonly List<TorrePendente> torresPendentes = new List<TorrePendente>();
     readonly List<TextoFlutuante> textosFlutuantes = new List<TextoFlutuante>();
     readonly List<SpriteRenderer> obstaculosDeConstrucao = new List<SpriteRenderer>();
 
@@ -99,6 +106,7 @@ public sealed class JogoGaucho : MonoBehaviour
             enabled = false;
             return;
         }
+        AplicarPreparo();
 
         GameObject baseDoGalpao = GameObject.Find("Base (galpao)");
         Transform visualDoGalpao = baseDoGalpao != null ? baseDoGalpao.transform.Find("Galpao") : null;
@@ -167,16 +175,12 @@ public sealed class JogoGaucho : MonoBehaviour
             if (renderizador == null)
                 continue;
 
-            if (movimentoAntigo != null)
-                movimentoAntigo.enabled = false;
-
             modelosInimigo.Add(new ModeloInimigo
             {
                 objeto = original,
                 quadros = movimentoAntigo != null ? movimentoAntigo.quadros : new[] { renderizador.sprite },
                 resistente = original.name.ToLowerInvariant().Contains("cinza")
             });
-            original.SetActive(false);
         }
 
         if (modelosInimigo.Count == 0)
@@ -209,14 +213,7 @@ public sealed class JogoGaucho : MonoBehaviour
                 ? TipoTorreGaucha.Espingarda
                 : TipoTorreGaucha.Revolver;
 
-            foreach (MirarNoAlvo miraAntiga in torreTransform.GetComponentsInChildren<MirarNoAlvo>(true))
-                miraAntiga.enabled = false;
-
-            TorreGaucha torre = torreTransform.GetComponent<TorreGaucha>();
-            if (torre == null)
-                torre = torreTransform.gameObject.AddComponent<TorreGaucha>();
-            torre.Configurar(this, tipo, false);
-            torres.Add(torre);
+            torresPendentes.Add(new TorrePendente { transform = torreTransform, tipo = tipo });
 
             if (tipo == TipoTorreGaucha.Revolver)
                 modeloRevolver = torreTransform.gameObject;
@@ -231,6 +228,31 @@ public sealed class JogoGaucho : MonoBehaviour
         }
 
         return true;
+    }
+
+    // So mexe na cena depois que todas as validacoes passaram, para nao deixar a cena pela metade.
+    void AplicarPreparo()
+    {
+        foreach (ModeloInimigo modelo in modelosInimigo)
+        {
+            SeguirCaminho movimentoAntigo = modelo.objeto.GetComponent<SeguirCaminho>();
+            if (movimentoAntigo != null)
+                movimentoAntigo.enabled = false;
+            modelo.objeto.SetActive(false);
+        }
+
+        foreach (TorrePendente pendente in torresPendentes)
+        {
+            foreach (MirarNoAlvo miraAntiga in pendente.transform.GetComponentsInChildren<MirarNoAlvo>(true))
+                miraAntiga.enabled = false;
+
+            TorreGaucha torre = pendente.transform.GetComponent<TorreGaucha>();
+            if (torre == null)
+                torre = pendente.transform.gameObject.AddComponent<TorreGaucha>();
+            torre.Configurar(this, pendente.tipo, false);
+            torres.Add(torre);
+        }
+        torresPendentes.Clear();
     }
 
     void Update()
@@ -916,6 +938,19 @@ static class JogoGauchoBootstrap
 {
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Iniciar()
+    {
+        // O hook roda uma vez so; reiniciar recarrega a cena e destroi o gerenciador, entao recriamos a cada carga.
+        SceneManager.sceneLoaded -= AoCarregarCena;
+        SceneManager.sceneLoaded += AoCarregarCena;
+        CriarGerenciador();
+    }
+
+    static void AoCarregarCena(Scene cena, LoadSceneMode modo)
+    {
+        CriarGerenciador();
+    }
+
+    static void CriarGerenciador()
     {
         if (SceneManager.GetActiveScene().name != "Teste_PixelArt")
             return;

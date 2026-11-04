@@ -95,6 +95,13 @@ public sealed class InimigoGaucho : MonoBehaviour
         AtualizarFlash();
     }
 
+    void OnDestroy()
+    {
+        // Garante que a onda possa terminar mesmo se o inimigo for destruido por fora do fluxo normal.
+        if (jogo != null)
+            jogo.DescartarInimigo(this);
+    }
+
     void Animar()
     {
         if (renderizador == null || quadros == null || quadros.Length < 2)
