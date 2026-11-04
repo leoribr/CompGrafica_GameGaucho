@@ -40,6 +40,8 @@ public sealed class JogoGaucho : MonoBehaviour
     const int TotalOndas = 6;
     const int CustoRevolver = 90;
     const int CustoEspingarda = 130;
+    const float RaioDeSelecao = 0.7f;
+    const int PontosDoAnel = 48;
 
     readonly List<Transform> pontos = new List<Transform>();
     Transform[] caminho;
@@ -57,6 +59,8 @@ public sealed class JogoGaucho : MonoBehaviour
     GameObject modeloRevolver;
     GameObject modeloEspingarda;
     GameObject previaTorre;
+    TorreGaucha selecionada;
+    LineRenderer anelDeAlcance;
     TipoTorreGaucha tipoEmConstrucao;
     bool posicaoPreviaValida;
     bool construindo;
@@ -266,6 +270,9 @@ public sealed class JogoGaucho : MonoBehaviour
     void Update()
     {
         AtualizarAtalhos();
+        // A selecao vem antes da construcao: o clique que posiciona uma torre nao a seleciona no mesmo quadro.
+        AtualizarSelecao();
+        AtualizarAnelDeAlcance();
         AtualizarConstrucao();
         AtualizarTextosFlutuantes();
 
@@ -279,8 +286,12 @@ public sealed class JogoGaucho : MonoBehaviour
         if (teclado == null)
             return;
 
+        if (teclado.uKey.wasPressedThisFrame)
+            MelhorarSelecionada();
+
         if (teclado.escapeKey.wasPressedThisFrame)
         {
+            selecionada = null;
             if (construindo)
                 CancelarConstrucao();
             else
@@ -299,6 +310,100 @@ public sealed class JogoGaucho : MonoBehaviour
             SelecionarConstrucao(TipoTorreGaucha.Revolver);
         if (teclado.digit2Key.wasPressedThisFrame)
             SelecionarConstrucao(TipoTorreGaucha.Espingarda);
+    }
+
+    void AtualizarSelecao()
+    {
+        if (jogoEncerrado)
+        {
+            selecionada = null;
+            return;
+        }
+        if (construindo || Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
+            return;
+
+        Vector2 mouseTela = Mouse.current.position.ReadValue();
+        if (PonteiroSobreInterface(mouseTela))
+            return;
+
+        Vector3 mundo = cameraPrincipal.ScreenToWorldPoint(new Vector3(mouseTela.x, mouseTela.y, -cameraPrincipal.transform.position.z));
+        TorreGaucha maisProxima = null;
+        float menorDistancia = RaioDeSelecao;
+        for (int i = 0; i < torres.Count; i++)
+        {
+            if (torres[i] == null)
+                continue;
+            float distancia = Vector2.Distance(mundo, torres[i].transform.position);
+            if (distancia < menorDistancia)
+            {
+                menorDistancia = distancia;
+                maisProxima = torres[i];
+            }
+        }
+
+        selecionada = maisProxima;
+    }
+
+    void AtualizarAnelDeAlcance()
+    {
+        if (selecionada == null)
+        {
+            if (anelDeAlcance != null)
+                anelDeAlcance.enabled = false;
+            return;
+        }
+
+        if (anelDeAlcance == null)
+            CriarAnelDeAlcance();
+
+        anelDeAlcance.enabled = true;
+        Vector3 centro = selecionada.transform.position;
+        float raio = selecionada.Alcance;
+        for (int i = 0; i <= PontosDoAnel; i++)
+        {
+            float angulo = i * Mathf.PI * 2f / PontosDoAnel;
+            anelDeAlcance.SetPosition(i, new Vector3(centro.x + Mathf.Cos(angulo) * raio, centro.y + Mathf.Sin(angulo) * raio, -0.2f));
+        }
+    }
+
+    void CriarAnelDeAlcance()
+    {
+        GameObject objeto = new GameObject("Anel de alcance");
+        objeto.transform.SetParent(transform, false);
+        anelDeAlcance = objeto.AddComponent<LineRenderer>();
+        if (materialParticula == null)
+            materialParticula = new Material(Shader.Find("Sprites/Default"));
+        anelDeAlcance.material = materialParticula;
+        anelDeAlcance.useWorldSpace = true;
+        anelDeAlcance.loop = false;
+        anelDeAlcance.positionCount = PontosDoAnel + 1;
+        anelDeAlcance.startWidth = 0.045f;
+        anelDeAlcance.endWidth = 0.045f;
+        anelDeAlcance.startColor = new Color(1f, 0.82f, 0.3f, 0.85f);
+        anelDeAlcance.endColor = new Color(1f, 0.82f, 0.3f, 0.85f);
+        anelDeAlcance.sortingOrder = 24;
+    }
+
+    int CustoDaMelhoria(TorreGaucha torre)
+    {
+        return MelhoriasTorre.Custo(Custo(torre.Tipo), torre.Nivel);
+    }
+
+    void MelhorarSelecionada()
+    {
+        if (jogoEncerrado || selecionada == null || !selecionada.PodeMelhorar)
+            return;
+
+        int custo = CustoDaMelhoria(selecionada);
+        if (pilas < custo)
+        {
+            ExibirAviso("Faltam pilas para melhorar esse gaucho", 2.5f);
+            return;
+        }
+
+        pilas -= custo;
+        selecionada.Melhorar();
+        ExibirAviso("Gaucho melhorado para o nivel " + selecionada.Nivel, 2f);
     }
 
     void AtualizarConstrucao()
@@ -341,6 +446,8 @@ public sealed class JogoGaucho : MonoBehaviour
         if (yGui > Screen.height - 150f * escala && mouseTela.x > Screen.width - 410f * escala)
             return true;
         if (tutorialAberto && mouseTela.x < 455f * escala && yGui < 390f * escala)
+            return true;
+        if (selecionada != null && RectPainelMelhoria(escala).Contains(new Vector2(mouseTela.x, yGui)))
             return true;
         return false;
     }
@@ -406,6 +513,7 @@ public sealed class JogoGaucho : MonoBehaviour
             return;
         }
 
+        selecionada = null;
         CancelarConstrucao();
         tipoEmConstrucao = tipo;
         GameObject modelo = tipo == TipoTorreGaucha.Revolver ? modeloRevolver : modeloEspingarda;
@@ -712,6 +820,7 @@ public sealed class JogoGaucho : MonoBehaviour
 
         PrepararEstilos();
         DesenharBarrasDeVida();
+        DesenharNiveisDeTorre();
         DesenharTextosFlutuantes();
         DesenharHud();
     }
@@ -735,6 +844,9 @@ public sealed class JogoGaucho : MonoBehaviour
             SelecionarConstrucao(TipoTorreGaucha.Revolver);
         if (GUI.Button(new Rect(392f * e, rodapeY, 216f * e, 58f * e), "[2] ESPING. $" + CustoEspingarda, estiloBotao))
             SelecionarConstrucao(TipoTorreGaucha.Espingarda);
+
+        if (selecionada != null && !jogoEncerrado)
+            DesenharPainelMelhoria(e);
 
         if (!ondaEmAndamento && !jogoEncerrado)
         {
@@ -763,6 +875,54 @@ public sealed class JogoGaucho : MonoBehaviour
             DesenharTutorial(e);
         if (jogoEncerrado)
             DesenharFimDeJogo(e);
+    }
+
+    // Fica logo acima do painel de contratacao; PonteiroSobreInterface usa o mesmo retangulo.
+    Rect RectPainelMelhoria(float e)
+    {
+        float altura = 140f * e;
+        return new Rect(18f * e, Screen.height - 114f * e - altura - 6f * e, 606f * e, altura);
+    }
+
+    void DesenharPainelMelhoria(float e)
+    {
+        Rect painel = RectPainelMelhoria(e);
+        GUI.Box(painel, GUIContent.none, estiloPainel);
+
+        string nome = selecionada.Tipo == TipoTorreGaucha.Revolver ? "GAUCHO REVOLVER" : "GAUCHO ESPINGARDA";
+        GUI.Label(new Rect(painel.x + 16f * e, painel.y + 8f * e, painel.width - 32f * e, 36f * e),
+            nome + "   Nv " + selecionada.Nivel + "/" + MelhoriasTorre.NivelMaximo, estiloDestaque);
+        GUI.Label(new Rect(painel.x + 16f * e, painel.y + 46f * e, painel.width - 32f * e, 32f * e),
+            "Dano " + selecionada.Dano + "   Alcance " + selecionada.Alcance.ToString("0.00")
+            + "   Tiro a cada " + selecionada.Intervalo.ToString("0.00") + "s", estiloTexto);
+
+        bool podeMelhorar = selecionada.PodeMelhorar;
+        string rotulo = podeMelhorar ? "MELHORAR [U]  $" + CustoDaMelhoria(selecionada) : "NIVEL MAXIMO";
+        bool habilitadoAntes = GUI.enabled;
+        GUI.enabled = podeMelhorar;
+        if (GUI.Button(new Rect(painel.x + 16f * e, painel.y + 84f * e, painel.width - 32f * e, 46f * e), rotulo, estiloBotao))
+            MelhorarSelecionada();
+        GUI.enabled = habilitadoAntes;
+    }
+
+    void DesenharNiveisDeTorre()
+    {
+        GUI.color = new Color(1f, 0.82f, 0.25f, 1f);
+        for (int i = 0; i < torres.Count; i++)
+        {
+            TorreGaucha torre = torres[i];
+            if (torre == null || torre.Nivel <= 1)
+                continue;
+            Vector3 tela = cameraPrincipal.WorldToScreenPoint(torre.transform.position + Vector3.up * 0.75f);
+            if (tela.z <= 0f)
+                continue;
+            int marcas = torre.Nivel - 1;
+            float x = tela.x - marcas * 4f;
+            float y = Screen.height - tela.y;
+            for (int m = 0; m < marcas; m++)
+                GUI.DrawTexture(new Rect(x + m * 8f, y, 6f, 6f), Texture2D.whiteTexture);
+        }
+        GUI.color = Color.white;
     }
 
     void DesenharTutorial(float e)

@@ -14,12 +14,37 @@ public sealed class TorreGaucha : MonoBehaviour
     SpriteRenderer armaRenderer;
     AudioSource audioSource;
     InimigoGaucho alvo;
+    float alcanceBase;
+    float intervaloBase;
+    int danoBase;
     float alcance;
     float intervalo;
     float proximoDisparo;
     float proximaBusca;
     int dano;
     bool ehPrevia;
+
+    public int Nivel { get; private set; } = 1;
+    public TipoTorreGaucha Tipo => tipo;
+    public float Alcance => alcance;
+    public int Dano => dano;
+    public float Intervalo => intervalo;
+    public bool PodeMelhorar => Nivel < MelhoriasTorre.NivelMaximo;
+
+    public void Melhorar()
+    {
+        if (!PodeMelhorar)
+            return;
+        Nivel++;
+        AtualizarStats();
+    }
+
+    void AtualizarStats()
+    {
+        alcance = MelhoriasTorre.Alcance(alcanceBase, Nivel);
+        intervalo = MelhoriasTorre.Intervalo(intervaloBase, Nivel);
+        dano = MelhoriasTorre.Dano(danoBase, Nivel);
+    }
 
     public void Configurar(JogoGaucho gerenciador, TipoTorreGaucha novoTipo, bool previa)
     {
@@ -42,16 +67,18 @@ public sealed class TorreGaucha : MonoBehaviour
 
         if (tipo == TipoTorreGaucha.Revolver)
         {
-            alcance = 4.25f;
-            intervalo = 0.48f;
-            dano = 2;
+            alcanceBase = 4.25f;
+            intervaloBase = 0.48f;
+            danoBase = 2;
         }
         else
         {
-            alcance = 4.9f;
-            intervalo = 1.05f;
-            dano = 5;
+            alcanceBase = 4.9f;
+            intervaloBase = 1.05f;
+            danoBase = 5;
         }
+        Nivel = 1;
+        AtualizarStats();
 
         if (!ehPrevia && audioSource == null)
         {
