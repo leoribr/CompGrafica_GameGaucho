@@ -20,7 +20,7 @@ public sealed class JogoGaucho : MonoBehaviour
     {
         public GameObject objeto;
         public Sprite[] quadros;
-        public bool resistente;
+        public bool ehCinza;
     }
 
     sealed class TextoFlutuante
@@ -42,6 +42,7 @@ public sealed class JogoGaucho : MonoBehaviour
     const int CustoEspingarda = 130;
 
     readonly List<Transform> pontos = new List<Transform>();
+    Transform[] caminho;
     readonly List<ModeloInimigo> modelosInimigo = new List<ModeloInimigo>();
     readonly HashSet<InimigoGaucho> inimigosAtivos = new HashSet<InimigoGaucho>();
     readonly List<TorreGaucha> torres = new List<TorreGaucha>();
@@ -150,6 +151,7 @@ public sealed class JogoGaucho : MonoBehaviour
             return false;
         }
 
+        caminho = pontos.ToArray();
         return true;
     }
 
@@ -179,13 +181,19 @@ public sealed class JogoGaucho : MonoBehaviour
             {
                 objeto = original,
                 quadros = movimentoAntigo != null ? movimentoAntigo.quadros : new[] { renderizador.sprite },
-                resistente = original.name.ToLowerInvariant().Contains("cinza")
+                ehCinza = original.name.ToLowerInvariant().Contains("cinza")
             });
         }
 
         if (modelosInimigo.Count == 0)
         {
             Debug.LogError("Game Gaucho: nenhum inimigo com SpriteRenderer foi encontrado.");
+            return false;
+        }
+
+        if (ModeloDe(true) == null || ModeloDe(false) == null)
+        {
+            Debug.LogError("Game Gaucho: o grupo 'Inimigos' precisa de um javali comum e de um javali cinza.");
             return false;
         }
 
@@ -468,14 +476,18 @@ public sealed class JogoGaucho : MonoBehaviour
 
     IEnumerator GerarOnda(int quantidade)
     {
+        int[] contagem = new int[TiposInimigo.Todos.Length];
         for (int i = 0; i < quantidade; i++)
         {
             if (jogoEncerrado)
                 yield break;
 
-            ModeloInimigo modelo = EscolherModelo(i);
+            DefinicaoInimigo definicao = TiposInimigo.Sortear(ondaAtual);
+            contagem[System.Array.IndexOf(TiposInimigo.Todos, definicao)]++;
+            ModeloInimigo modelo = ModeloDe(definicao.origemCinza);
             GameObject objeto = Instantiate(modelo.objeto, pontos[0].position, Quaternion.identity, grupoInimigos);
-            objeto.name = modelo.resistente ? "Javali Cinza" : "Javali";
+            objeto.name = definicao.nome;
+            objeto.transform.localScale *= definicao.escala;
 
             SeguirCaminho antigo = objeto.GetComponent<SeguirCaminho>();
             if (antigo != null)
@@ -485,43 +497,36 @@ public sealed class JogoGaucho : MonoBehaviour
             if (inimigo == null)
                 inimigo = objeto.AddComponent<InimigoGaucho>();
 
-            int vida = 4 + ondaAtual * 3;
-            float velocidade = 1.45f + ondaAtual * 0.08f;
-            int recompensa = 9 + ondaAtual;
-            int danoNaBase = 1;
-            if (modelo.resistente)
-            {
-                vida = Mathf.RoundToInt(vida * 1.9f);
-                velocidade *= 0.82f;
-                recompensa += 8;
-                danoNaBase = 2;
-            }
+            int vida = Mathf.Max(1, Mathf.RoundToInt((4 + ondaAtual * 3) * definicao.multiplicadorVida));
+            float velocidade = (1.45f + ondaAtual * 0.08f) * definicao.multiplicadorVelocidade;
+            int recompensa = 9 + ondaAtual + definicao.bonusRecompensa;
 
             objeto.SetActive(true);
-            inimigo.Configurar(this, pontos.ToArray(), vida, velocidade, recompensa, danoNaBase, modelo.quadros);
+            inimigo.Configurar(this, caminho, vida, velocidade, recompensa, definicao.danoNaBase, modelo.quadros, definicao.cor);
             inimigosAtivos.Add(inimigo);
             yield return new WaitForSeconds(Mathf.Max(0.48f, 0.88f - ondaAtual * 0.045f));
         }
 
+        System.Text.StringBuilder resumo = new System.Text.StringBuilder("Game Gaucho: onda " + ondaAtual + " ->");
+        for (int i = 0; i < contagem.Length; i++)
+        {
+            if (contagem[i] > 0)
+                resumo.Append(' ').Append(TiposInimigo.Todos[i].nome).Append(" x").Append(contagem[i]);
+        }
+        Debug.Log(resumo.ToString());
+
         geracaoTerminou = true;
     }
 
-    ModeloInimigo EscolherModelo(int indice)
+    ModeloInimigo ModeloDe(bool cinza)
     {
-        if (modelosInimigo.Count == 1)
-            return modelosInimigo[0];
-
-        if (ondaAtual >= 2 && indice > 0 && indice % 4 == 0)
+        for (int i = 0; i < modelosInimigo.Count; i++)
         {
-            for (int i = 0; i < modelosInimigo.Count; i++)
-            {
-                if (modelosInimigo[i].resistente)
-                    return modelosInimigo[i];
-            }
+            if (modelosInimigo[i].ehCinza == cinza)
+                return modelosInimigo[i];
         }
 
-        List<ModeloInimigo> comuns = modelosInimigo.FindAll(modelo => !modelo.resistente);
-        return comuns.Count > 0 ? comuns[indice % comuns.Count] : modelosInimigo[indice % modelosInimigo.Count];
+        return null;
     }
 
     void ConcluirOnda()

@@ -16,6 +16,7 @@ public sealed class InimigoGaucho : MonoBehaviour
     float velocidade;
     float relogioAnimacao;
     float flashAte;
+    Color corBase = Color.white;
     bool finalizado;
 
     public bool EstaVivo => !finalizado && vida > 0;
@@ -29,7 +30,8 @@ public sealed class InimigoGaucho : MonoBehaviour
         float novaVelocidade,
         int novaRecompensa,
         int novoDanoNaBase,
-        Sprite[] novosQuadros)
+        Sprite[] novosQuadros,
+        Color novaCorBase)
     {
         jogo = gerenciador;
         pontos = caminho;
@@ -40,6 +42,9 @@ public sealed class InimigoGaucho : MonoBehaviour
         danoNaBase = Mathf.Max(1, novoDanoNaBase);
         quadros = novosQuadros;
         renderizador = GetComponent<SpriteRenderer>();
+        corBase = novaCorBase;
+        if (renderizador != null)
+            renderizador.color = corBase;
         proximoPonto = 1;
         quadroAtual = 0;
         finalizado = false;
@@ -119,7 +124,7 @@ public sealed class InimigoGaucho : MonoBehaviour
     {
         if (renderizador != null && flashAte > 0f && Time.time >= flashAte)
         {
-            renderizador.color = Color.white;
+            renderizador.color = corBase;
             flashAte = 0f;
         }
     }
