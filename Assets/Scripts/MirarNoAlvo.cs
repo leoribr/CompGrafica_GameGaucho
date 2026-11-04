@@ -7,6 +7,8 @@ public class MirarNoAlvo : MonoBehaviour
     public bool espelharParaEsquerda = false;
 
     SpriteRenderer sr;
+    Transform alvoAtual;
+    float proximaBusca;
 
     void Start()
     {
@@ -15,7 +17,13 @@ public class MirarNoAlvo : MonoBehaviour
 
     void Update()
     {
-        Transform alvo = ProcurarAlvo();
+        if (Time.time >= proximaBusca || alvoAtual == null)
+        {
+            alvoAtual = ProcurarAlvo();
+            proximaBusca = Time.time + 0.15f;
+        }
+
+        Transform alvo = alvoAtual;
         if (alvo == null)
             return;
 
@@ -23,7 +31,7 @@ public class MirarNoAlvo : MonoBehaviour
         float angulo = Mathf.Atan2(direcao.y, direcao.x) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Euler(0f, 0f, angulo);
 
-        if (espelharParaEsquerda)
+        if (espelharParaEsquerda && sr != null)
             sr.flipY = direcao.x < 0f;
     }
 
@@ -32,8 +40,10 @@ public class MirarNoAlvo : MonoBehaviour
         Transform maisProximo = null;
         float menorDistancia = alcance;
 
-        foreach (SeguirCaminho inimigo in FindObjectsByType<SeguirCaminho>(FindObjectsSortMode.None))
+        foreach (InimigoGaucho inimigo in FindObjectsByType<InimigoGaucho>(FindObjectsSortMode.None))
         {
+            if (!inimigo.EstaVivo)
+                continue;
             float distancia = Vector2.Distance(transform.position, inimigo.transform.position);
             if (distancia <= menorDistancia)
             {

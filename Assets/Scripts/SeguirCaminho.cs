@@ -20,6 +20,12 @@ public class SeguirCaminho : MonoBehaviour
     void Start()
     {
         sr = GetComponent<SpriteRenderer>();
+        if (sr == null || pontos == null || pontos.Length < 2 || pontos[0] == null)
+        {
+            Debug.LogWarning($"{name}: SeguirCaminho precisa de SpriteRenderer e pelo menos dois pontos validos.", this);
+            enabled = false;
+            return;
+        }
         transform.position = pontos[0].position;
     }
 
@@ -28,6 +34,13 @@ public class SeguirCaminho : MonoBehaviour
         if (atraso > 0f)
         {
             atraso -= Time.deltaTime;
+            return;
+        }
+
+        if (proximo >= pontos.Length || pontos[proximo] == null)
+        {
+            Debug.LogWarning($"{name}: o caminho contem um ponto ausente.", this);
+            enabled = false;
             return;
         }
 
@@ -40,7 +53,7 @@ public class SeguirCaminho : MonoBehaviour
         if (dx != 0f)
             sr.flipX = dx < 0f;
 
-        if (transform.position == alvo)
+        if ((transform.position - alvo).sqrMagnitude < 0.0001f)
         {
             proximo++;
             if (proximo >= pontos.Length)
