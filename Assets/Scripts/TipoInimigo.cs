@@ -42,12 +42,17 @@ public sealed class DefinicaoInimigo
 /// <summary>Tabela dos tipos de javali e sorteio ponderado por onda.</summary>
 public static class TiposInimigo
 {
+    // Peso 0: nunca sai no sorteio; a onda final o pede explicitamente.
+    public static readonly DefinicaoInimigo Chefe =
+        new DefinicaoInimigo("Chefe Javali", false, new Color(0.85f, 0.3f, 0.25f), 1.9f, 16f, 0.45f, 50, 999, 0, 6);
+
     public static readonly DefinicaoInimigo[] Todos =
     {
         new DefinicaoInimigo("Javali", false, Color.white, 1f, 1f, 1f, 0, 1, 10, 1),
         new DefinicaoInimigo("Javali Cinza", true, Color.white, 1f, 1.9f, 0.82f, 8, 2, 3, 2),
         new DefinicaoInimigo("Javali Veloz", false, new Color(1f, 0.9f, 0.45f), 0.85f, 0.55f, 1.55f, 3, 1, 4, 2),
-        new DefinicaoInimigo("Javali Pesado", false, new Color(0.55f, 0.45f, 0.45f), 1.3f, 3.2f, 0.65f, 16, 3, 2, 4)
+        new DefinicaoInimigo("Javali Pesado", false, new Color(0.55f, 0.45f, 0.45f), 1.3f, 3.2f, 0.65f, 16, 3, 2, 4),
+        Chefe
     };
 
     public static DefinicaoInimigo Sortear(int onda)

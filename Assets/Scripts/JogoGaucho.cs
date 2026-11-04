@@ -40,6 +40,7 @@ public sealed class JogoGaucho : MonoBehaviour
     const int TotalOndas = 6;
     const int CustoRevolver = 90;
     const int CustoEspingarda = 130;
+    const int EscoltaDoChefe = 10;
     const float RaioDeSelecao = 0.7f;
     const int PontosDoAnel = 48;
 
@@ -70,7 +71,7 @@ public sealed class JogoGaucho : MonoBehaviour
     bool jogoEncerrado;
     bool vitoria;
     int vidas = 20;
-    int pilas = 180;
+    int pilas = 140;
     int ondaAtual;
     int eliminados;
     int inimigosDaOnda;
@@ -577,9 +578,13 @@ public sealed class JogoGaucho : MonoBehaviour
         ondaEmAndamento = true;
         geracaoTerminou = false;
         eliminados = 0;
-        inimigosDaOnda = 5 + ondaAtual * 2;
+        bool ondaDoChefe = ondaAtual == TotalOndas;
+        inimigosDaOnda = ondaDoChefe ? 1 + EscoltaDoChefe : 5 + ondaAtual * 2;
         StartCoroutine(GerarOnda(inimigosDaOnda));
-        ExibirAviso("Onda " + ondaAtual + " comecou!", 2f);
+        if (ondaDoChefe)
+            ExibirAviso("O CHEFE CHEGOU!", 4f);
+        else
+            ExibirAviso("Onda " + ondaAtual + " comecou!", 2f);
     }
 
     IEnumerator GerarOnda(int quantidade)
@@ -590,7 +595,10 @@ public sealed class JogoGaucho : MonoBehaviour
             if (jogoEncerrado)
                 yield break;
 
-            DefinicaoInimigo definicao = TiposInimigo.Sortear(ondaAtual);
+            // Na onda final o chefe sai primeiro; como e lento, a escolta o ultrapassa.
+            DefinicaoInimigo definicao = ondaAtual == TotalOndas && i == 0
+                ? TiposInimigo.Chefe
+                : TiposInimigo.Sortear(ondaAtual);
             contagem[System.Array.IndexOf(TiposInimigo.Todos, definicao)]++;
             ModeloInimigo modelo = ModeloDe(definicao.origemCinza);
             GameObject objeto = Instantiate(modelo.objeto, pontos[0].position, Quaternion.identity, grupoInimigos);
@@ -605,12 +613,12 @@ public sealed class JogoGaucho : MonoBehaviour
             if (inimigo == null)
                 inimigo = objeto.AddComponent<InimigoGaucho>();
 
-            int vida = Mathf.Max(1, Mathf.RoundToInt((4 + ondaAtual * 3) * definicao.multiplicadorVida));
+            int vida = Mathf.Max(1, Mathf.RoundToInt((5 + ondaAtual * 4) * definicao.multiplicadorVida));
             float velocidade = (1.45f + ondaAtual * 0.08f) * definicao.multiplicadorVelocidade;
-            int recompensa = 9 + ondaAtual + definicao.bonusRecompensa;
+            int recompensa = 7 + ondaAtual + definicao.bonusRecompensa;
 
             objeto.SetActive(true);
-            inimigo.Configurar(this, caminho, vida, velocidade, recompensa, definicao.danoNaBase, modelo.quadros, definicao.cor);
+            inimigo.Configurar(this, caminho, vida, velocidade, recompensa, definicao.danoNaBase, modelo.quadros, definicao.cor, definicao == TiposInimigo.Chefe);
             inimigosAtivos.Add(inimigo);
             yield return new WaitForSeconds(Mathf.Max(0.48f, 0.88f - ondaAtual * 0.045f));
         }
@@ -655,7 +663,7 @@ public sealed class JogoGaucho : MonoBehaviour
             return;
         }
 
-        int bonus = 35 + ondaAtual * 10;
+        int bonus = 30 + ondaAtual * 8;
         pilas += bonus;
         ExibirAviso("Onda vencida! Bonus de " + bonus + " pilas", 4f);
     }
@@ -964,15 +972,18 @@ public sealed class JogoGaucho : MonoBehaviour
         {
             if (inimigo == null || !inimigo.EstaVivo || inimigo.VidaNormalizada >= 0.999f)
                 continue;
-            Vector3 tela = cameraPrincipal.WorldToScreenPoint(inimigo.transform.position + Vector3.up * 0.62f);
+            // O chefe tem barra mais larga e mais alta, por causa da escala maior.
+            float largura = inimigo.EhChefe ? 72f : 36f;
+            float altura = inimigo.EhChefe ? 1.1f : 0.62f;
+            Vector3 tela = cameraPrincipal.WorldToScreenPoint(inimigo.transform.position + Vector3.up * altura);
             if (tela.z <= 0f)
                 continue;
-            float x = tela.x - 18f;
+            float x = tela.x - largura * 0.5f;
             float y = Screen.height - tela.y;
             GUI.color = new Color(0.12f, 0.08f, 0.07f, 0.9f);
-            GUI.DrawTexture(new Rect(x, y, 36f, 5f), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(x, y, largura, 5f), Texture2D.whiteTexture);
             GUI.color = new Color(0.36f, 0.86f, 0.28f, 1f);
-            GUI.DrawTexture(new Rect(x + 1f, y + 1f, 34f * inimigo.VidaNormalizada, 3f), Texture2D.whiteTexture);
+            GUI.DrawTexture(new Rect(x + 1f, y + 1f, (largura - 2f) * inimigo.VidaNormalizada, 3f), Texture2D.whiteTexture);
         }
         GUI.color = Color.white;
     }

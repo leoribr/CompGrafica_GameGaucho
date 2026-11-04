@@ -22,6 +22,7 @@ public sealed class InimigoGaucho : MonoBehaviour
     public bool EstaVivo => !finalizado && vida > 0;
     public float VidaNormalizada => vidaMaxima > 0 ? Mathf.Clamp01((float)vida / vidaMaxima) : 0f;
     public float ProgressoCaminho { get; private set; }
+    public bool EhChefe { get; private set; }
 
     public void Configurar(
         JogoGaucho gerenciador,
@@ -31,8 +32,10 @@ public sealed class InimigoGaucho : MonoBehaviour
         int novaRecompensa,
         int novoDanoNaBase,
         Sprite[] novosQuadros,
-        Color novaCorBase)
+        Color novaCorBase,
+        bool ehChefe)
     {
+        EhChefe = ehChefe;
         jogo = gerenciador;
         pontos = caminho;
         vidaMaxima = Mathf.Max(1, novaVida);
