@@ -16,7 +16,7 @@ Nao e necessario montar objetos ou configurar componentes: a camada jogavel e pr
 
 - **Espaco**: iniciar a proxima onda.
 - **1**: contratar gaucho de revolver (rapido).
-- **2**: contratar gaucho de espingarda (tiro forte e em area).
+- **2**: contratar gaucho de espingarda (chumbo em leque: forte e acerta varios).
 - **Clique esquerdo**: posicionar o gaucho na grama.
 - **Clique direito** ou **Esc**: cancelar a construcao.
 - Botao **x1/x2**: alternar a velocidade.
@@ -24,6 +24,7 @@ Nao e necessario montar objetos ou configurar componentes: a camada jogavel e pr
 
 ## Objetivo da versao atual
 
+- Comece sem gauchos: contrate com **1** ou **2** e posicione onde quiser (360 pilas iniciais).
 - Defender 20 vidas do galpao por 6 ondas.
 - Animais eliminados rendem pilas.
 - Use as pilas para reforcar a defesa.
@@ -35,4 +36,4 @@ Nao e necessario montar objetos ou configurar componentes: a camada jogavel e pr
 - `Assets/Scripts/JogoGaucho.cs`: ondas, economia, HUD e construcao.
 - `Assets/Scripts/InimigoGaucho.cs`: vida e movimento dos inimigos.
 - `Assets/Scripts/TorreGaucha.cs`: mira, tiros e dano das torres.
-- `Assets/Scripts/Projetil.cs` + `Assets/Resources/Projetil_Revolver.prefab`: bala do revolver, que voa ate o inimigo e causa dano na colisao.
+- `Assets/Scripts/Projetil.cs` + prefabs em `Assets/Resources/`: projeteis que voam ate o inimigo e causam dano na colisao (bala do revolver e chumbo em leque da espingarda).

@@ -1,8 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Bala disparada pelo gaucho: voa em direcao ao alvo e causa dano ao colidir com um inimigo.
-/// Se o alvo morrer no caminho, segue reto ate acertar outro animal ou sair da tela.
+/// Bala (revolver) ou chumbo (espingarda) disparado pelo gaucho: voa em direcao ao alvo e causa
+/// dano ao colidir com um inimigo. Se o alvo morrer no caminho, segue reto ate acertar outro
+/// animal, sair da tela ou acabar o tempo de vida.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
 public sealed class Projetil : MonoBehaviour
@@ -30,13 +31,18 @@ public sealed class Projetil : MonoBehaviour
         Destroy(gameObject, tempoDeVida);
     }
 
-    public void Configurar(JogoGaucho gerenciador, InimigoGaucho novoAlvo, int novoDano)
+    public void Configurar(JogoGaucho gerenciador, InimigoGaucho novoAlvo, int novoDano, float desvioEmGraus = 0f)
     {
         jogo = gerenciador;
-        alvo = novoAlvo;
         dano = novoDano;
-        if (alvo != null)
-            direcao = ((Vector2)(alvo.transform.position - transform.position)).normalized;
+        if (novoAlvo != null)
+            direcao = ((Vector2)(novoAlvo.transform.position - transform.position)).normalized;
+
+        // Com desvio (chumbo lateral da espingarda) o projetil nao persegue: segue reto na direcao desviada.
+        if (desvioEmGraus != 0f)
+            direcao = Quaternion.Euler(0f, 0f, desvioEmGraus) * direcao;
+        else
+            alvo = novoAlvo;
     }
 
     void FixedUpdate()

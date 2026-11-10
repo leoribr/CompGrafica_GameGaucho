@@ -31,12 +31,6 @@ public sealed class JogoGaucho : MonoBehaviour
         public float criadoEm;
     }
 
-    struct TorrePendente
-    {
-        public Transform transform;
-        public TipoTorreGaucha tipo;
-    }
-
     const int TotalOndas = 6;
     const int CustoRevolver = 90;
     const int CustoEspingarda = 130;
@@ -49,7 +43,6 @@ public sealed class JogoGaucho : MonoBehaviour
     readonly List<ModeloInimigo> modelosInimigo = new List<ModeloInimigo>();
     readonly HashSet<InimigoGaucho> inimigosAtivos = new HashSet<InimigoGaucho>();
     readonly List<TorreGaucha> torres = new List<TorreGaucha>();
-    readonly List<TorrePendente> torresPendentes = new List<TorrePendente>();
     readonly List<TextoFlutuante> textosFlutuantes = new List<TextoFlutuante>();
     readonly List<SpriteRenderer> obstaculosDeConstrucao = new List<SpriteRenderer>();
 
@@ -71,7 +64,8 @@ public sealed class JogoGaucho : MonoBehaviour
     bool jogoEncerrado;
     bool vitoria;
     int vidas = 20;
-    int pilas = 140;
+    // O jogador comeca sem gauchos: 140 de troco + o preco de um revolver e de uma espingarda.
+    int pilas = 360;
     int ondaAtual;
     int eliminados;
     int inimigosDaOnda;
@@ -215,23 +209,12 @@ public sealed class JogoGaucho : MonoBehaviour
         }
 
         grupoTorres = raiz.transform;
-        List<Transform> torresDaCena = new List<Transform>();
-        foreach (Transform filho in grupoTorres)
-            torresDaCena.Add(filho);
-
-        for (int i = 0; i < torresDaCena.Count; i++)
+        foreach (Transform torreTransform in grupoTorres)
         {
-            Transform torreTransform = torresDaCena[i];
-            TipoTorreGaucha tipo = torreTransform.name.ToLowerInvariant().Contains("espingarda")
-                ? TipoTorreGaucha.Espingarda
-                : TipoTorreGaucha.Revolver;
-
-            torresPendentes.Add(new TorrePendente { transform = torreTransform, tipo = tipo });
-
-            if (tipo == TipoTorreGaucha.Revolver)
-                modeloRevolver = torreTransform.gameObject;
-            else
+            if (torreTransform.name.ToLowerInvariant().Contains("espingarda"))
                 modeloEspingarda = torreTransform.gameObject;
+            else
+                modeloRevolver = torreTransform.gameObject;
         }
 
         if (modeloRevolver == null || modeloEspingarda == null)
@@ -254,18 +237,14 @@ public sealed class JogoGaucho : MonoBehaviour
             modelo.objeto.SetActive(false);
         }
 
-        foreach (TorrePendente pendente in torresPendentes)
+        // Os gauchos da cena sao so moldes (como os javalis): o jogador comeca sem nenhum
+        // e posiciona todos onde quiser.
+        foreach (Transform torreTransform in grupoTorres)
         {
-            foreach (MirarNoAlvo miraAntiga in pendente.transform.GetComponentsInChildren<MirarNoAlvo>(true))
+            foreach (MirarNoAlvo miraAntiga in torreTransform.GetComponentsInChildren<MirarNoAlvo>(true))
                 miraAntiga.enabled = false;
-
-            TorreGaucha torre = pendente.transform.GetComponent<TorreGaucha>();
-            if (torre == null)
-                torre = pendente.transform.gameObject.AddComponent<TorreGaucha>();
-            torre.Configurar(this, pendente.tipo, false);
-            torres.Add(torre);
+            torreTransform.gameObject.SetActive(false);
         }
-        torresPendentes.Clear();
     }
 
     void Update()
@@ -273,8 +252,9 @@ public sealed class JogoGaucho : MonoBehaviour
         AtualizarAtalhos();
         // A selecao vem antes da construcao: o clique que posiciona uma torre nao a seleciona no mesmo quadro.
         AtualizarSelecao();
-        AtualizarAnelDeAlcance();
         AtualizarConstrucao();
+        // Depois da construcao, para o anel acompanhar a previa no mesmo quadro em que ela se move.
+        AtualizarAnelDeAlcance();
         AtualizarTextosFlutuantes();
 
         if (ondaEmAndamento && geracaoTerminou && inimigosAtivos.Count == 0)
@@ -345,9 +325,21 @@ public sealed class JogoGaucho : MonoBehaviour
         selecionada = maisProxima;
     }
 
+    // Mostra o alcance da previa durante a construcao (verde = pode colocar, vermelho = bloqueado)
+    // ou, fora dela, o alcance do gaucho selecionado.
     void AtualizarAnelDeAlcance()
     {
-        if (selecionada == null)
+        TorreGaucha torreDoAnel = selecionada;
+        Color cor = new Color(1f, 0.82f, 0.3f, 0.85f);
+        if (construindo && previaTorre != null)
+        {
+            torreDoAnel = previaTorre.GetComponent<TorreGaucha>();
+            cor = posicaoPreviaValida
+                ? new Color(0.55f, 1f, 0.55f, 0.9f)
+                : new Color(1f, 0.42f, 0.42f, 0.9f);
+        }
+
+        if (torreDoAnel == null)
         {
             if (anelDeAlcance != null)
                 anelDeAlcance.enabled = false;
@@ -358,8 +350,10 @@ public sealed class JogoGaucho : MonoBehaviour
             CriarAnelDeAlcance();
 
         anelDeAlcance.enabled = true;
-        Vector3 centro = selecionada.transform.position;
-        float raio = selecionada.Alcance;
+        anelDeAlcance.startColor = cor;
+        anelDeAlcance.endColor = cor;
+        Vector3 centro = torreDoAnel.transform.position;
+        float raio = torreDoAnel.Alcance;
         for (int i = 0; i <= PontosDoAnel; i++)
         {
             float angulo = i * Mathf.PI * 2f / PontosDoAnel;
@@ -380,8 +374,6 @@ public sealed class JogoGaucho : MonoBehaviour
         anelDeAlcance.positionCount = PontosDoAnel + 1;
         anelDeAlcance.startWidth = 0.045f;
         anelDeAlcance.endWidth = 0.045f;
-        anelDeAlcance.startColor = new Color(1f, 0.82f, 0.3f, 0.85f);
-        anelDeAlcance.endColor = new Color(1f, 0.82f, 0.3f, 0.85f);
         anelDeAlcance.sortingOrder = 24;
     }
 
@@ -690,19 +682,6 @@ public sealed class JogoGaucho : MonoBehaviour
         return melhor;
     }
 
-    public List<InimigoGaucho> InimigosNoRaio(Vector3 centro, float raio)
-    {
-        List<InimigoGaucho> encontrados = new List<InimigoGaucho>();
-        float raioQuadrado = raio * raio;
-        foreach (InimigoGaucho inimigo in inimigosAtivos)
-        {
-            if (inimigo != null && inimigo.EstaVivo &&
-                ((Vector2)(inimigo.transform.position - centro)).sqrMagnitude <= raioQuadrado)
-                encontrados.Add(inimigo);
-        }
-        return encontrados;
-    }
-
     public void InimigoEliminado(InimigoGaucho inimigo, int recompensa, Vector3 posicao)
     {
         if (!inimigosAtivos.Remove(inimigo))
@@ -939,7 +918,7 @@ public sealed class JogoGaucho : MonoBehaviour
         GUI.Box(painel, GUIContent.none, estiloPainel);
         GUI.Label(new Rect(42f * e, 124f * e, 390f * e, 44f * e), "COMO JOGAR", estiloDestaque);
         GUI.Label(new Rect(42f * e, 172f * e, 380f * e, 124f * e),
-            "1. Inicie a onda.\n2. Os gauchos atiram sozinhos.\n3. Contrate reforcos e coloque na grama.\n4. Nao deixe os animais chegarem ao galpao.", estiloTexto);
+            "1. Contrate gauchos e coloque na grama.\n2. Inicie a onda.\n3. Os gauchos atiram sozinhos.\n4. Nao deixe os animais chegarem ao galpao.", estiloTexto);
         if (GUI.Button(new Rect(42f * e, 307f * e, 165f * e, 48f * e), "ENTENDI", estiloBotao))
             tutorialAberto = false;
     }

@@ -1,11 +1,12 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>Mira e dispara automaticamente no animal mais avancado dentro do alcance.</summary>
 public sealed class TorreGaucha : MonoBehaviour
 {
-    static Material materialRastro;
-    static Projetil moldeProjetil;
+    const float AberturaDoLeque = 12f;
+
+    static Projetil moldeBala;
+    static Projetil moldeChumbo;
     static AudioClip somRevolver;
     static AudioClip somEspingarda;
 
@@ -68,13 +69,13 @@ public sealed class TorreGaucha : MonoBehaviour
 
         if (tipo == TipoTorreGaucha.Revolver)
         {
-            alcanceBase = 4.25f;
+            alcanceBase = 2.125f;
             intervaloBase = 0.48f;
             danoBase = 2;
         }
         else
         {
-            alcanceBase = 4.9f;
+            alcanceBase = 2.45f;
             intervaloBase = 1.05f;
             danoBase = 5;
         }
@@ -135,16 +136,17 @@ public sealed class TorreGaucha : MonoBehaviour
 
         if (tipo == TipoTorreGaucha.Espingarda)
         {
-            Vector3 origem = arma != null ? arma.position : transform.position;
-            Vector3 destino = alvoPrincipal.transform.position;
-            CriarRastro(origem, destino);
-            List<InimigoGaucho> atingidos = jogo.InimigosNoRaio(destino, 0.72f);
-            for (int i = 0; i < atingidos.Count; i++)
-                atingidos[i].ReceberDano(atingidos[i] == alvoPrincipal ? dano : Mathf.Max(1, dano / 2));
+            // Chumbo em leque: o do meio persegue o alvo com dano cheio; os laterais seguem reto
+            // com metade do dano e acertam quem estiver perto (ou o proprio alvo, se estiver colado).
+            Projetil chumbo = CarregarMolde(ref moldeChumbo, "Projetil_Espingarda");
+            int danoLateral = Mathf.Max(1, dano / 2);
+            CriarProjetil(chumbo, alvoPrincipal, dano, 0f);
+            CriarProjetil(chumbo, alvoPrincipal, danoLateral, AberturaDoLeque);
+            CriarProjetil(chumbo, alvoPrincipal, danoLateral, -AberturaDoLeque);
         }
         else
         {
-            DispararProjetil(alvoPrincipal);
+            CriarProjetil(CarregarMolde(ref moldeBala, "Projetil_Revolver"), alvoPrincipal, dano, 0f);
         }
 
         if (audioSource != null)
@@ -155,40 +157,27 @@ public sealed class TorreGaucha : MonoBehaviour
         }
     }
 
-    // A bala sai da ponta da arma; o dano so acontece quando ela colide com o inimigo.
-    void DispararProjetil(InimigoGaucho alvoPrincipal)
+    static Projetil CarregarMolde(ref Projetil molde, string nomeDoPrefab)
     {
-        if (moldeProjetil == null)
-            moldeProjetil = Resources.Load<Projetil>("Projetil_Revolver");
-        if (moldeProjetil == null)
+        if (molde == null)
         {
-            Debug.LogError("Game Gaucho: nao encontrei o prefab Resources/Projetil_Revolver.");
-            return;
+            molde = Resources.Load<Projetil>(nomeDoPrefab);
+            if (molde == null)
+                Debug.LogError("Game Gaucho: nao encontrei o prefab Resources/" + nomeDoPrefab + ".");
         }
-
-        Vector3 bocaDaArma = arma != null ? arma.position + arma.right * 0.6f : transform.position;
-        Projetil projetil = Instantiate(moldeProjetil, bocaDaArma, Quaternion.identity);
-        projetil.Configurar(jogo, alvoPrincipal, dano);
+        return molde;
     }
 
-    void CriarRastro(Vector3 origem, Vector3 destino)
+    // O projetil sai da ponta da arma; o dano so acontece quando ele colide com o inimigo.
+    void CriarProjetil(Projetil molde, InimigoGaucho alvoPrincipal, int danoDoProjetil, float desvioEmGraus)
     {
-        GameObject efeito = new GameObject("Rastro do tiro");
-        LineRenderer linha = efeito.AddComponent<LineRenderer>();
-        if (materialRastro == null)
-            materialRastro = new Material(Shader.Find("Sprites/Default"));
-        linha.material = materialRastro;
-        linha.positionCount = 2;
-        origem.z = -0.2f;
-        destino.z = -0.2f;
-        linha.SetPosition(0, origem);
-        linha.SetPosition(1, destino);
-        linha.startWidth = tipo == TipoTorreGaucha.Espingarda ? 0.065f : 0.038f;
-        linha.endWidth = 0.012f;
-        linha.startColor = new Color(1f, 0.92f, 0.34f, 1f);
-        linha.endColor = new Color(1f, 0.45f, 0.08f, 0.15f);
-        linha.sortingOrder = 25;
-        Destroy(efeito, 0.075f);
+        if (molde == null)
+            return;
+
+        float comprimentoDaArma = tipo == TipoTorreGaucha.Espingarda ? 0.7f : 0.6f;
+        Vector3 bocaDaArma = arma != null ? arma.position + arma.right * comprimentoDaArma : transform.position;
+        Projetil projetil = Instantiate(molde, bocaDaArma, Quaternion.identity);
+        projetil.Configurar(jogo, alvoPrincipal, danoDoProjetil, desvioEmGraus);
     }
 
     static AudioClip ObterSomRevolver()
