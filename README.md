@@ -35,3 +35,4 @@ Nao e necessario montar objetos ou configurar componentes: a camada jogavel e pr
 - `Assets/Scripts/JogoGaucho.cs`: ondas, economia, HUD e construcao.
 - `Assets/Scripts/InimigoGaucho.cs`: vida e movimento dos inimigos.
 - `Assets/Scripts/TorreGaucha.cs`: mira, tiros e dano das torres.
+- `Assets/Scripts/Projetil.cs` + `Assets/Resources/Projetil_Revolver.prefab`: bala do revolver, que voa ate o inimigo e causa dano na colisao.

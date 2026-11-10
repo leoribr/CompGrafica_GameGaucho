@@ -57,6 +57,19 @@ public sealed class InimigoGaucho : MonoBehaviour
             transform.position = pontos[0].position;
         if (renderizador != null && quadros != null && quadros.Length > 0 && quadros[0] != null)
             renderizador.sprite = quadros[0];
+        PrepararColisao();
+    }
+
+    // Colisor + corpo kinematic: o movimento continua pelo Transform, mas os projeteis detectam o impacto.
+    void PrepararColisao()
+    {
+        if (GetComponent<Collider2D>() == null)
+            gameObject.AddComponent<CircleCollider2D>().radius = 0.4f;
+
+        Rigidbody2D corpo = GetComponent<Rigidbody2D>();
+        if (corpo == null)
+            corpo = gameObject.AddComponent<Rigidbody2D>();
+        corpo.bodyType = RigidbodyType2D.Kinematic;
     }
 
     void Update()

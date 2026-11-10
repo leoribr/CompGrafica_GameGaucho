@@ -5,6 +5,7 @@ using UnityEngine;
 public sealed class TorreGaucha : MonoBehaviour
 {
     static Material materialRastro;
+    static Projetil moldeProjetil;
     static AudioClip somRevolver;
     static AudioClip somEspingarda;
 
@@ -132,19 +133,18 @@ public sealed class TorreGaucha : MonoBehaviour
         if (alvoPrincipal == null || !alvoPrincipal.EstaVivo)
             return;
 
-        Vector3 origem = arma != null ? arma.position : transform.position;
-        Vector3 destino = alvoPrincipal.transform.position;
-        CriarRastro(origem, destino);
-
         if (tipo == TipoTorreGaucha.Espingarda)
         {
+            Vector3 origem = arma != null ? arma.position : transform.position;
+            Vector3 destino = alvoPrincipal.transform.position;
+            CriarRastro(origem, destino);
             List<InimigoGaucho> atingidos = jogo.InimigosNoRaio(destino, 0.72f);
             for (int i = 0; i < atingidos.Count; i++)
                 atingidos[i].ReceberDano(atingidos[i] == alvoPrincipal ? dano : Mathf.Max(1, dano / 2));
         }
         else
         {
-            alvoPrincipal.ReceberDano(dano);
+            DispararProjetil(alvoPrincipal);
         }
 
         if (audioSource != null)
@@ -153,6 +153,22 @@ public sealed class TorreGaucha : MonoBehaviour
             audioSource.pitch = Random.Range(0.94f, 1.07f);
             audioSource.PlayOneShot(clip);
         }
+    }
+
+    // A bala sai da ponta da arma; o dano so acontece quando ela colide com o inimigo.
+    void DispararProjetil(InimigoGaucho alvoPrincipal)
+    {
+        if (moldeProjetil == null)
+            moldeProjetil = Resources.Load<Projetil>("Projetil_Revolver");
+        if (moldeProjetil == null)
+        {
+            Debug.LogError("Game Gaucho: nao encontrei o prefab Resources/Projetil_Revolver.");
+            return;
+        }
+
+        Vector3 bocaDaArma = arma != null ? arma.position + arma.right * 0.6f : transform.position;
+        Projetil projetil = Instantiate(moldeProjetil, bocaDaArma, Quaternion.identity);
+        projetil.Configurar(jogo, alvoPrincipal, dano);
     }
 
     void CriarRastro(Vector3 origem, Vector3 destino)
