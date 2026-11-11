@@ -113,6 +113,9 @@ public sealed class JogoGaucho : MonoBehaviour
         galpao = visualDoGalpao != null
             ? visualDoGalpao
             : baseDoGalpao != null ? baseDoGalpao.transform : pontos[pontos.Count - 1];
+        // A chegada dos animais e detectada por colisao com o galpao (trigger), nao pelo ultimo ponto.
+        if (baseDoGalpao != null && galpao.GetComponent<GalpaoGaucho>() == null)
+            galpao.gameObject.AddComponent<GalpaoGaucho>();
         PrepararObstaculosDeConstrucao();
         ExibirAviso("Clique em INICIAR ONDA quando estiver pronto", 6f);
     }

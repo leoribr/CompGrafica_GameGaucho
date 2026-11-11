@@ -3,8 +3,12 @@ using UnityEngine;
 /// <summary>Vida, animacao e movimento de um animal pelo caminho.</summary>
 public sealed class InimigoGaucho : MonoBehaviour
 {
+    const float DistanciaMaximaAlemDoCaminho = 3f;
+
     JogoGaucho jogo;
     Transform[] pontos;
+    Vector2 direcaoFinal;
+    float distanciaAlemDoCaminho;
     Sprite[] quadros;
     SpriteRenderer renderizador;
     int vida;
@@ -52,6 +56,7 @@ public sealed class InimigoGaucho : MonoBehaviour
         quadroAtual = 0;
         finalizado = false;
         ProgressoCaminho = 0f;
+        distanciaAlemDoCaminho = 0f;
 
         if (pontos != null && pontos.Length > 0 && pontos[0] != null)
             transform.position = pontos[0].position;
@@ -76,6 +81,11 @@ public sealed class InimigoGaucho : MonoBehaviour
     {
         if (finalizado || jogo == null || !jogo.PodeCombater)
             return;
+        if (pontos != null && proximoPonto >= pontos.Length && pontos.Length >= 2)
+        {
+            AvancarAlemDoCaminho();
+            return;
+        }
         if (pontos == null || pontos.Length < 2 || proximoPonto >= pontos.Length || pontos[proximoPonto] == null)
         {
             Debug.LogWarning("Inimigo sem caminho valido: " + name);
@@ -105,15 +115,43 @@ public sealed class InimigoGaucho : MonoBehaviour
             proximoPonto++;
             if (proximoPonto >= pontos.Length)
             {
-                finalizado = true;
-                jogo.InimigoChegouAoGalpao(this, danoNaBase, transform.position);
-                Destroy(gameObject);
-                return;
+                // Fim do caminho: segue em frente ate o trigger do galpao detectar a chegada.
+                direcaoFinal = ((Vector2)(alvo - inicioDoTrecho)).normalized;
+                if (direcaoFinal == Vector2.zero)
+                    direcaoFinal = Vector2.right;
             }
         }
 
         Animar();
         AtualizarFlash();
+    }
+
+    void AvancarAlemDoCaminho()
+    {
+        float passo = velocidade * Time.deltaTime;
+        transform.position += (Vector3)(direcaoFinal * passo);
+        distanciaAlemDoCaminho += passo;
+
+        // Seguranca: se nenhum galpao com collider for tocado, a onda nao pode travar.
+        if (distanciaAlemDoCaminho > DistanciaMaximaAlemDoCaminho)
+        {
+            Debug.LogWarning("Game Gaucho: " + name + " passou do caminho sem tocar no galpao.");
+            ChegarAoGalpao();
+            return;
+        }
+
+        Animar();
+        AtualizarFlash();
+    }
+
+    /// <summary>Chamado pelo GalpaoGaucho quando o collider do animal entra no trigger da base.</summary>
+    public void ChegarAoGalpao()
+    {
+        if (!EstaVivo)
+            return;
+        finalizado = true;
+        jogo.InimigoChegouAoGalpao(this, danoNaBase, transform.position);
+        Destroy(gameObject);
     }
 
     void OnDestroy()
