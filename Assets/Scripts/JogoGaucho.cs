@@ -63,9 +63,11 @@ public sealed class JogoGaucho : MonoBehaviour
     bool tutorialAberto = true;
     bool jogoEncerrado;
     bool vitoria;
-    int vidas = 20;
-    // O jogador comeca sem gauchos: 140 de troco + o preco de um revolver e de uma espingarda.
-    int pilas = 360;
+    // Vidas e pilas iniciais vem da dificuldade escolhida (ver Dificuldade.cs).
+    // O jogador comeca sem gauchos, entao as pilas cobrem os primeiros contratados.
+    Dificuldade dificuldade;
+    int vidas;
+    int pilas;
     int ondaAtual;
     int eliminados;
     int inimigosDaOnda;
@@ -92,6 +94,10 @@ public sealed class JogoGaucho : MonoBehaviour
     {
         Application.targetFrameRate = 60;
         Time.timeScale = 1f;
+
+        dificuldade = Dificuldade.Atual;
+        vidas = dificuldade.vidas;
+        pilas = dificuldade.pilasIniciais;
 
         cameraPrincipal = Camera.main;
         if (cameraPrincipal == null)
@@ -608,8 +614,8 @@ public sealed class JogoGaucho : MonoBehaviour
             if (inimigo == null)
                 inimigo = objeto.AddComponent<InimigoGaucho>();
 
-            int vida = Mathf.Max(1, Mathf.RoundToInt((5 + ondaAtual * 4) * definicao.multiplicadorVida));
-            float velocidade = (1.45f + ondaAtual * 0.08f) * definicao.multiplicadorVelocidade;
+            int vida = Mathf.Max(1, Mathf.RoundToInt((5 + ondaAtual * 4) * definicao.multiplicadorVida * dificuldade.multiplicadorVida));
+            float velocidade = (1.45f + ondaAtual * 0.08f) * definicao.multiplicadorVelocidade * dificuldade.multiplicadorVelocidade;
             int recompensa = 7 + ondaAtual + definicao.bonusRecompensa;
 
             objeto.SetActive(true);
@@ -823,6 +829,7 @@ public sealed class JogoGaucho : MonoBehaviour
         GUI.Label(new Rect(390f * e, 17f * e, 220f * e, 52f * e), "VIDAS  " + vidas, estiloDestaque);
         GUI.Label(new Rect(625f * e, 17f * e, 260f * e, 52f * e), "PILAS  $" + pilas, estiloDestaque);
         GUI.Label(new Rect(900f * e, 17f * e, 260f * e, 52f * e), "ONDA  " + ondaAtual + "/" + TotalOndas, estiloDestaque);
+        GUI.Label(new Rect(Screen.width - 330f * e, 17f * e, 185f * e, 52f * e), dificuldade.nome.ToUpperInvariant(), estiloDestaque);
 
         if (GUI.Button(new Rect(Screen.width - 130f * e, 16f * e, 104f * e, 50f * e), "x" + velocidadeDoJogo.ToString("0"), estiloBotao))
             AlternarVelocidade();
@@ -924,6 +931,16 @@ public sealed class JogoGaucho : MonoBehaviour
             "1. Contrate gauchos e coloque na grama.\n2. Inicie a onda.\n3. Os gauchos atiram sozinhos.\n4. Nao deixe os animais chegarem ao galpao.", estiloTexto);
         if (GUI.Button(new Rect(42f * e, 307f * e, 165f * e, 48f * e), "ENTENDI", estiloBotao))
             tutorialAberto = false;
+
+        // So da para trocar antes da primeira onda; recarregar a cena reaplica vidas e pilas.
+        bool habilitadoAntes = GUI.enabled;
+        GUI.enabled = ondaAtual == 0;
+        if (GUI.Button(new Rect(220f * e, 307f * e, 212f * e, 48f * e), "NIVEL: " + dificuldade.nome.ToUpperInvariant(), estiloBotao))
+        {
+            Dificuldade.Alternar();
+            Reiniciar();
+        }
+        GUI.enabled = habilitadoAntes;
     }
 
     void DesenharFimDeJogo(float e)
