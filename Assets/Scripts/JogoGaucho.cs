@@ -66,6 +66,8 @@ public sealed class JogoGaucho : MonoBehaviour
     // Vidas e pilas iniciais vem da dificuldade escolhida (ver Dificuldade.cs).
     // O jogador comeca sem gauchos, entao as pilas cobrem os primeiros contratados.
     Dificuldade dificuldade;
+    TempoMissao tempo;
+    bool derrotaPorTempo;
     int vidas;
     int pilas;
     int ondaAtual;
@@ -89,6 +91,8 @@ public sealed class JogoGaucho : MonoBehaviour
     Material materialParticula;
 
     public bool PodeCombater => !jogoEncerrado;
+    /// <summary>Segundos que sobraram no cronometro (usado na pontuacao).</summary>
+    public float TempoRestante => tempo != null ? tempo.Restante : 0f;
 
     void Awake()
     {
@@ -98,6 +102,8 @@ public sealed class JogoGaucho : MonoBehaviour
         dificuldade = Dificuldade.Atual;
         vidas = dificuldade.vidas;
         pilas = dificuldade.pilasIniciais;
+        // O relogio so comeca na primeira onda: ate la o jogador monta a defesa com calma.
+        tempo = new TempoMissao(dificuldade.tempoSegundos);
 
         cameraPrincipal = Camera.main;
         if (cameraPrincipal == null)
@@ -268,6 +274,21 @@ public sealed class JogoGaucho : MonoBehaviour
 
         if (ondaEmAndamento && geracaoTerminou && inimigosAtivos.Count == 0)
             ConcluirOnda();
+
+        AtualizarTempo();
+    }
+
+    void AtualizarTempo()
+    {
+        if (jogoEncerrado)
+            return;
+        // Usa o tempo escalado: no x2 o relogio corre junto com o jogo.
+        tempo.Atualizar(Time.deltaTime);
+        if (tempo.Esgotou)
+        {
+            derrotaPorTempo = true;
+            EncerrarDerrota("O tempo acabou!");
+        }
     }
 
     void AtualizarAtalhos()
@@ -576,6 +597,8 @@ public sealed class JogoGaucho : MonoBehaviour
         tutorialAberto = false;
         CancelarConstrucao();
         ondaAtual++;
+        if (ondaAtual == 1)
+            tempo.Iniciar();
         ondaEmAndamento = true;
         geracaoTerminou = false;
         eliminados = 0;
@@ -658,6 +681,7 @@ public sealed class JogoGaucho : MonoBehaviour
         {
             jogoEncerrado = true;
             vitoria = true;
+            tempo.Parar();
             velocidadeDoJogo = 1f;
             Time.timeScale = 1f;
             ExibirAviso("O galpao esta salvo!", 5f);
@@ -710,16 +734,22 @@ public sealed class JogoGaucho : MonoBehaviour
         CriarEstouro(posicao, new Color(0.85f, 0.22f, 0.16f));
 
         if (vidas == 0)
-        {
-            jogoEncerrado = true;
-            vitoria = false;
-            ondaEmAndamento = false;
-            velocidadeDoJogo = 1f;
-            Time.timeScale = 1f;
-            StopAllCoroutines();
-            CancelarConstrucao();
-            ExibirAviso("O galpao foi invadido...", 5f);
-        }
+            EncerrarDerrota("O galpao foi invadido...");
+    }
+
+    void EncerrarDerrota(string mensagem)
+    {
+        if (jogoEncerrado)
+            return;
+        jogoEncerrado = true;
+        vitoria = false;
+        ondaEmAndamento = false;
+        tempo.Parar();
+        velocidadeDoJogo = 1f;
+        Time.timeScale = 1f;
+        StopAllCoroutines();
+        CancelarConstrucao();
+        ExibirAviso(mensagem, 5f);
     }
 
     public void DescartarInimigo(InimigoGaucho inimigo)
@@ -830,6 +860,13 @@ public sealed class JogoGaucho : MonoBehaviour
         GUI.Label(new Rect(625f * e, 17f * e, 260f * e, 52f * e), "PILAS  $" + pilas, estiloDestaque);
         GUI.Label(new Rect(900f * e, 17f * e, 260f * e, 52f * e), "ONDA  " + ondaAtual + "/" + TotalOndas, estiloDestaque);
         GUI.Label(new Rect(Screen.width - 330f * e, 17f * e, 185f * e, 52f * e), dificuldade.nome.ToUpperInvariant(), estiloDestaque);
+
+        // Fica vermelho nos ultimos 30 segundos.
+        Color corAntes = estiloDestaque.normal.textColor;
+        if (tempo.Ativo && tempo.Restante <= 30f)
+            estiloDestaque.normal.textColor = new Color(1f, 0.35f, 0.3f);
+        GUI.Label(new Rect(1175f * e, 17f * e, 220f * e, 52f * e), "TEMPO  " + tempo.Formatado, estiloDestaque);
+        estiloDestaque.normal.textColor = corAntes;
 
         if (GUI.Button(new Rect(Screen.width - 130f * e, 16f * e, 104f * e, 50f * e), "x" + velocidadeDoJogo.ToString("0"), estiloBotao))
             AlternarVelocidade();
@@ -955,11 +992,15 @@ public sealed class JogoGaucho : MonoBehaviour
         Rect painel = new Rect(Screen.width * 0.5f - largura * 0.5f, Screen.height * 0.5f - altura * 0.5f, largura, altura);
         GUI.Box(painel, GUIContent.none, estiloPainel);
         GUI.Label(new Rect(painel.x + 30f * e, painel.y + 34f * e, painel.width - 60f * e, 75f * e),
-            vitoria ? "VITORIA NO PAMPA!" : "O GALPAO CAIU", estiloTitulo);
-        GUI.Label(new Rect(painel.x + 45f * e, painel.y + 120f * e, painel.width - 90f * e, 80f * e),
-            vitoria
-                ? "Voce segurou todas as ondas e salvou a estancia."
-                : "Os animais atravessaram a defesa. Reposicione os gauchos e tente novamente.", estiloCentro);
+            vitoria ? "VITORIA NO PAMPA!" : derrotaPorTempo ? "O TEMPO ACABOU" : "O GALPAO CAIU", estiloTitulo);
+        string mensagem;
+        if (vitoria)
+            mensagem = "Voce segurou todas as ondas e salvou a estancia, com " + tempo.Formatado + " de sobra.";
+        else if (derrotaPorTempo)
+            mensagem = "As ondas nao terminaram a tempo. Elimine os animais mais rapido e tente novamente.";
+        else
+            mensagem = "Os animais atravessaram a defesa. Reposicione os gauchos e tente novamente.";
+        GUI.Label(new Rect(painel.x + 45f * e, painel.y + 120f * e, painel.width - 90f * e, 80f * e), mensagem, estiloCentro);
         if (GUI.Button(new Rect(painel.x + 145f * e, painel.y + 225f * e, painel.width - 290f * e, 66f * e),
             "JOGAR DE NOVO  [R]", vitoria ? estiloBotao : estiloBotaoPerigo))
             Reiniciar();
