@@ -39,3 +39,14 @@ No menu da para escolher o nivel (Facil, Normal ou Dificil), ver o ranking e as 
 - `Assets/Scripts/InimigoGaucho.cs`: vida e movimento dos inimigos.
 - `Assets/Scripts/TorreGaucha.cs`: mira, tiros e dano das torres.
 - `Assets/Scripts/Projetil.cs` + prefabs em `Assets/Resources/`: projeteis que voam ate o inimigo e causam dano na colisao (bala do revolver e chumbo em leque da espingarda).
+- `Assets/Scripts/MusicaDeFundo.cs` + `Assets/Resources/Musica/`: trilha sonora em loop, que continua tocando entre o menu e a fase.
+
+## Creditos
+
+| Asset | Autor | Licenca |
+|---|---|---|
+| Trilha sonora ["Las Dos Fronteras"](https://opengameart.org/content/mml-las-dos-fronteras) | Patrick de Arteaga ([patrickdearteaga.com](https://patrickdearteaga.com)) | CC-BY 4.0 |
+| [Tiny Town](https://kenney.nl/assets/tiny-town) e [Tiny Farm](https://opengameart.org/content/tiny-farm) | Kenney | CC0 |
+| [Ninja Adventure](https://pixel-boy.itch.io/ninja-adventure-asset-pack) (javalis) | Pixel-Boy e AAA | CC0 |
+| [Tiny gun icons (16x16)](https://opengameart.org/content/tiny-gun-icons-16x16) (revolver e espingarda) | congusbongus | CC0 |
+| [Argentinian Assets Pack](https://kwyjibo.itch.io/argentinian-assets-pack) (mate e assado) | kwyjibo | Gratuito, com credito ao autor |

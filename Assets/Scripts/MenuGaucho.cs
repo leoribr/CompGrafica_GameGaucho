@@ -128,6 +128,8 @@ public sealed class MenuGaucho : MonoBehaviour
             "Espingarda ($130): chumbo em leque, forte e de perto.\n\n" +
             "O nivel muda a vida e a velocidade dos animais, as pilas, as vidas e o tempo da missao.",
             estiloTexto);
+        GUI.Label(new Rect(painel.x + 50f * e, painel.yMax - 150f * e, painel.width - 100f * e, 52f * e),
+            "Musica: \"Las Dos Fronteras\", de Patrick de Arteaga (patrickdearteaga.com) - CC-BY 4.0", estiloSubtitulo);
         BotaoVoltar(painel, e);
     }
 
