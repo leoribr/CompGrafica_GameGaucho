@@ -31,6 +31,7 @@ public sealed class JogoGaucho : MonoBehaviour
         public float criadoEm;
     }
 
+    const string CenaDoMenu = "Menu";
     const int TotalOndas = 6;
     const int CustoRevolver = 90;
     const int CustoEspingarda = 130;
@@ -312,6 +313,11 @@ public sealed class JogoGaucho : MonoBehaviour
         if (jogoEncerrado && teclado.rKey.wasPressedThisFrame)
         {
             Reiniciar();
+            return;
+        }
+        if (jogoEncerrado && teclado.mKey.wasPressedThisFrame)
+        {
+            VoltarAoMenu();
             return;
         }
 
@@ -831,6 +837,12 @@ public sealed class JogoGaucho : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
+    void VoltarAoMenu()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(CenaDoMenu);
+    }
+
     void AlternarVelocidade()
     {
         if (jogoEncerrado)
@@ -1001,9 +1013,11 @@ public sealed class JogoGaucho : MonoBehaviour
         else
             mensagem = "Os animais atravessaram a defesa. Reposicione os gauchos e tente novamente.";
         GUI.Label(new Rect(painel.x + 45f * e, painel.y + 120f * e, painel.width - 90f * e, 80f * e), mensagem, estiloCentro);
-        if (GUI.Button(new Rect(painel.x + 145f * e, painel.y + 225f * e, painel.width - 290f * e, 66f * e),
+        if (GUI.Button(new Rect(painel.x + 50f * e, painel.y + 225f * e, 330f * e, 66f * e),
             "JOGAR DE NOVO  [R]", vitoria ? estiloBotao : estiloBotaoPerigo))
             Reiniciar();
+        if (GUI.Button(new Rect(painel.x + 400f * e, painel.y + 225f * e, 210f * e, 66f * e), "MENU  [M]", estiloBotao))
+            VoltarAoMenu();
     }
 
     void DesenharBarrasDeVida()
@@ -1168,7 +1182,9 @@ static class JogoGauchoBootstrap
 
     static void CriarGerenciador()
     {
-        if (SceneManager.GetActiveScene().name != "Teste_PixelArt")
+        // So as cenas de fase tem o caminho dos animais; o menu e outras cenas ficam de fora.
+        // (Antes dependia do nome da cena, o que quebrava em silencio se ela fosse renomeada.)
+        if (GameObject.Find("Caminho (pontos)") == null)
             return;
         if (Object.FindFirstObjectByType<JogoGaucho>() != null)
             return;

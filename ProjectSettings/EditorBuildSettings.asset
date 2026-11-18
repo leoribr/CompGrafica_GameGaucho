@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Menu.unity
+    guid: 171a0990100e2bc48a116319f5b60ced
+  - enabled: 1
     path: Assets/Scenes/Teste_PixelArt.unity
     guid: 45196dd4d29361049b408bb58483af18
   m_configObjects:
