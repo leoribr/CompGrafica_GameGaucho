@@ -18,6 +18,9 @@ public sealed class MenuGaucho : MonoBehaviour
     }
 
     Painel painelAberto = Painel.Principal;
+    // Lido do PlayerPrefs so ao abrir o painel, nao a cada OnGUI.
+    System.Collections.Generic.List<RegistroRanking> ranking;
+    bool confirmarLimpeza;
 
     GUIStyle estiloPainel;
     GUIStyle estiloTitulo;
@@ -98,7 +101,11 @@ public sealed class MenuGaucho : MonoBehaviour
         y += 22f * e;
 
         if (Botao(x, ref y, w, e, "RANKING"))
+        {
             painelAberto = Painel.Ranking;
+            ranking = null;
+            confirmarLimpeza = false;
+        }
         if (Botao(x, ref y, w, e, "COMO JOGAR"))
             painelAberto = Painel.ComoJogar;
         if (Botao(x, ref y, w, e, "SAIR"))
@@ -108,10 +115,51 @@ public sealed class MenuGaucho : MonoBehaviour
     void DesenharRanking(float e)
     {
         Rect painel = PainelGrande(e, "RANKING");
-        // A pontuacao e o registro das partidas entram no proximo passo; ate la a lista fica vazia.
-        GUI.Label(new Rect(painel.x + 50f * e, painel.y + 120f * e, painel.width - 100f * e, 60f * e),
-            "Nenhuma partida registrada ainda.", estiloSubtitulo);
+        if (ranking == null)
+            ranking = Ranking.Carregar();
+
+        if (ranking.Count == 0)
+        {
+            GUI.Label(new Rect(painel.x + 50f * e, painel.y + 120f * e, painel.width - 100f * e, 60f * e),
+                "Nenhuma partida registrada ainda.", estiloSubtitulo);
+        }
+        else
+        {
+            float x = painel.x + 60f * e;
+            float y = painel.y + 100f * e;
+            float linha = 38f * e;
+            LinhaRanking(x, y, e, "#", "PONTOS", "NIVEL", "RESULTADO", "DATA");
+            for (int i = 0; i < ranking.Count; i++)
+            {
+                RegistroRanking r = ranking[i];
+                string resultado = r.vitoria ? "Vitoria" : "Derrota (onda " + (r.ondas + 1) + ")";
+                LinhaRanking(x, y + linha * (i + 1), e, (i + 1) + "o", r.pontos.ToString(), r.nivel, resultado, r.data);
+            }
+        }
+
+        // Duas confirmacoes para nao apagar o ranking sem querer.
+        float largura = 220f * e;
+        Rect botaoLimpar = new Rect(painel.xMax - largura - 30f * e, painel.yMax - 90f * e, largura, 62f * e);
+        if (ranking.Count > 0 && GUI.Button(botaoLimpar, confirmarLimpeza ? "CONFIRMAR?" : "LIMPAR", estiloBotao))
+        {
+            if (confirmarLimpeza)
+            {
+                Ranking.Limpar();
+                ranking = null;
+            }
+            confirmarLimpeza = !confirmarLimpeza;
+        }
         BotaoVoltar(painel, e);
+    }
+
+    void LinhaRanking(float x, float y, float e, string posicao, string pontos, string nivel, string resultado, string data)
+    {
+        float altura = 34f * e;
+        GUI.Label(new Rect(x, y, 60f * e, altura), posicao, estiloTexto);
+        GUI.Label(new Rect(x + 70f * e, y, 120f * e, altura), pontos, estiloTexto);
+        GUI.Label(new Rect(x + 200f * e, y, 120f * e, altura), nivel, estiloTexto);
+        GUI.Label(new Rect(x + 330f * e, y, 250f * e, altura), resultado, estiloTexto);
+        GUI.Label(new Rect(x + 590f * e, y, 120f * e, altura), data, estiloTexto);
     }
 
     void DesenharComoJogar(float e)
@@ -126,7 +174,8 @@ public sealed class MenuGaucho : MonoBehaviour
             "Espaco  -  iniciar a proxima onda      x1/x2  -  velocidade\n\n" +
             "Revolver ($90): tiro rapido em um alvo.\n" +
             "Espingarda ($130): chumbo em leque, forte e de perto.\n\n" +
-            "O nivel muda a vida e a velocidade dos animais, as pilas, as vidas e o tempo da missao.",
+            "O nivel muda a vida e a velocidade dos animais, as pilas, as vidas e o tempo da missao.\n" +
+            "Pontos: 10 por animal, 100 por onda e bonus de vitoria (vidas e tempo). Normal x1,5, Dificil x2.",
             estiloTexto);
         GUI.Label(new Rect(painel.x + 50f * e, painel.yMax - 150f * e, painel.width - 100f * e, 52f * e),
             "Musica: \"Las Dos Fronteras\", de Patrick de Arteaga (patrickdearteaga.com) - CC-BY 4.0", estiloSubtitulo);

@@ -73,7 +73,10 @@ public sealed class JogoGaucho : MonoBehaviour
     int pilas;
     int ondaAtual;
     int eliminados;
+    int eliminadosNoTotal;
     int inimigosDaOnda;
+    int pontuacaoFinal;
+    int posicaoNoRanking;
     float velocidadeDoJogo = 1f;
     string aviso = "Proteja o galpao!";
     float avisoAte;
@@ -130,6 +133,8 @@ public sealed class JogoGaucho : MonoBehaviour
         if (baseDoGalpao != null && galpao.GetComponent<GalpaoGaucho>() == null)
             galpao.gameObject.AddComponent<GalpaoGaucho>();
         PrepararObstaculosDeConstrucao();
+        // Depois dos obstaculos: fumaca, nuvens e passaros nao devem impedir a construcao.
+        gameObject.AddComponent<AmbienteGaucho>();
         ExibirAviso("Clique em INICIAR ONDA quando estiver pronto", 6f);
     }
 
@@ -690,6 +695,8 @@ public sealed class JogoGaucho : MonoBehaviour
             tempo.Parar();
             velocidadeDoJogo = 1f;
             Time.timeScale = 1f;
+            RegistrarNoRanking();
+            EfeitosSonoros.Vitoria();
             ExibirAviso("O galpao esta salvo!", 5f);
             return;
         }
@@ -727,6 +734,8 @@ public sealed class JogoGaucho : MonoBehaviour
             return;
         pilas += recompensa;
         eliminados++;
+        eliminadosNoTotal++;
+        EfeitosSonoros.Morte(inimigo.EhChefe);
         AdicionarTexto(posicao + Vector3.up * 0.45f, "+" + recompensa + " pilas", new Color(1f, 0.86f, 0.25f));
         CriarEstouro(posicao, new Color(1f, 0.65f, 0.18f));
     }
@@ -736,6 +745,7 @@ public sealed class JogoGaucho : MonoBehaviour
         if (!inimigosAtivos.Remove(inimigo))
             return;
         vidas = Mathf.Max(0, vidas - dano);
+        EfeitosSonoros.DanoNoGalpao();
         AdicionarTexto(posicao + Vector3.up * 0.5f, "-" + dano + " vida", new Color(1f, 0.3f, 0.25f));
         CriarEstouro(posicao, new Color(0.85f, 0.22f, 0.16f));
 
@@ -755,7 +765,35 @@ public sealed class JogoGaucho : MonoBehaviour
         Time.timeScale = 1f;
         StopAllCoroutines();
         CancelarConstrucao();
+        RegistrarNoRanking();
+        EfeitosSonoros.Derrota();
         ExibirAviso(mensagem, 5f);
+    }
+
+    /// <summary>
+    /// Pontuacao = 10 por animal + 100 por onda vencida; na vitoria soma 500 + 20 por vida + 2 por segundo
+    /// que sobrou. O total e multiplicado pelo nivel (Facil x1, Normal x1,5, Dificil x2).
+    /// </summary>
+    int CalcularPontuacao()
+    {
+        int ondasVencidas = vitoria ? TotalOndas : Mathf.Max(0, ondaAtual - 1);
+        int pontos = eliminadosNoTotal * 10 + ondasVencidas * 100;
+        if (vitoria)
+            pontos += 500 + vidas * 20 + Mathf.CeilToInt(tempo.Restante) * 2;
+        return Mathf.RoundToInt(pontos * dificuldade.multiplicadorPontuacao);
+    }
+
+    void RegistrarNoRanking()
+    {
+        pontuacaoFinal = CalcularPontuacao();
+        posicaoNoRanking = Ranking.Registrar(new RegistroRanking
+        {
+            pontos = pontuacaoFinal,
+            nivel = dificuldade.nome,
+            vitoria = vitoria,
+            ondas = vitoria ? TotalOndas : Mathf.Max(0, ondaAtual - 1),
+            data = System.DateTime.Now.ToString("dd/MM HH:mm")
+        });
     }
 
     public void DescartarInimigo(InimigoGaucho inimigo)
@@ -1012,7 +1050,13 @@ public sealed class JogoGaucho : MonoBehaviour
             mensagem = "As ondas nao terminaram a tempo. Elimine os animais mais rapido e tente novamente.";
         else
             mensagem = "Os animais atravessaram a defesa. Reposicione os gauchos e tente novamente.";
-        GUI.Label(new Rect(painel.x + 45f * e, painel.y + 120f * e, painel.width - 90f * e, 80f * e), mensagem, estiloCentro);
+        GUI.Label(new Rect(painel.x + 45f * e, painel.y + 105f * e, painel.width - 90f * e, 70f * e), mensagem, estiloCentro);
+        string pontuacao = "PONTUACAO: " + pontuacaoFinal + "  (" + dificuldade.nome + ")";
+        if (posicaoNoRanking > 0)
+            pontuacao += "  -  " + posicaoNoRanking + "o lugar no ranking!";
+        GUI.color = new Color(1f, 0.86f, 0.35f);
+        GUI.Label(new Rect(painel.x + 45f * e, painel.y + 172f * e, painel.width - 90f * e, 40f * e), pontuacao, estiloCentro);
+        GUI.color = antiga;
         if (GUI.Button(new Rect(painel.x + 50f * e, painel.y + 225f * e, 330f * e, 66f * e),
             "JOGAR DE NOVO  [R]", vitoria ? estiloBotao : estiloBotaoPerigo))
             Reiniciar();

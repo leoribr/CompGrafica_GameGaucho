@@ -84,6 +84,7 @@ public sealed class Projetil : MonoBehaviour
             return;
 
         acertou = true;
+        EfeitosSonoros.Acerto();
         inimigo.ReceberDano(dano);
         Destroy(gameObject);
     }
