@@ -31,6 +31,7 @@ public sealed partial class JogoGaucho : MonoBehaviour
     readonly HashSet<DefinicaoInimigo> bichosVistos = new HashSet<DefinicaoInimigo>();
 
     Camera cameraPrincipal;
+    LagoaGaucho lagoa;
     Transform grupoInimigos;
     Transform grupoTorres;
     Transform galpao;
@@ -106,6 +107,7 @@ public sealed partial class JogoGaucho : MonoBehaviour
         if (baseDoGalpao != null && galpao.GetComponent<GalpaoGaucho>() == null)
             galpao.gameObject.AddComponent<GalpaoGaucho>();
         PrepararObstaculosDeConstrucao();
+        PrepararLagoa();
         gameObject.AddComponent<AmbienteGaucho>();
         ExibirAviso("Contrate gaúchos e clique em INICIAR ONDA quando estiver pronto", 6f);
     }
@@ -121,6 +123,16 @@ public sealed partial class JogoGaucho : MonoBehaviour
             if (grupoInimigos != null && sr.transform.IsChildOf(grupoInimigos))
                 continue;
             obstaculosDeConstrucao.Add(sr);
+        }
+    }
+
+    void PrepararLagoa()
+    {
+        lagoa = new LagoaGaucho(new Vector2(-3f, -0.9f), new Vector2(1.45f, 1.05f), transform);
+        foreach (SpriteRenderer sr in FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None))
+        {
+            if (sr != null && sr.sortingOrder < 2 && sr.gameObject != lagoa.Objeto && lagoa.Contem(sr.transform.position, -0.3f))
+                sr.enabled = false;
         }
     }
 

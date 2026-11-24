@@ -39,6 +39,23 @@ No menu da para escolher o nivel (Facil, Normal ou Dificil), ver o ranking e as 
 - Cada gaucho tem 3 caminhos de melhoria com 5 niveis; so um caminho passa do nivel 2.
 - Os bichos sao da fauna do RS e tem jeitos diferentes: furtivos (so quem ve furtivo mira neles), blindados (corte e bala comum nao furam), imunes a explosao, frio, fogo ou magica, teimosos (regeneram) e bichos grandes que soltam outros quando caem.
 - A ultima onda traz o Rei Javaporco: se ele chegar ao galpao, a partida acaba.
+- O mapa tem uma lagoa dentro da primeira curva do caminho: o Pescador e o Lanchao so ficam na agua, e a Iara fica na agua ou na beira.
+
+## Gauchos (26, em 4 classes)
+
+Inspirados no papel das torres do Bloons TD 6, mas com personagens, nomes e melhorias proprios do RS. Nao ha habilidades ativaveis: tudo e passivo ou automatico.
+
+- **Peoes:** Peao da Peixeira, Gaucho da Boleadeira, Fogueteiro, Assador do Churrasco, Gaucho do Minuano, Lacador e Gaucho do Revolver.
+- **Farrapos:** Bombeador da Carabina, Pescador da Lagoa, Lanchao Farroupilha, Aviador do Teco-teco, Gaucho a Cavalo, Canhao Farroupilha e Gaucho da Espingarda.
+- **Lendas e Causos:** Bruxo da Salamanca, Monarca das Coxilhas, Dancador da Chula, Benzedeira, Guardiao da Araucaria, Iara da Lagoa e Pia da Pandorga.
+- **Estancia:** Charqueada (pacotes de charque para clicar), Alambrador das Rosetas, Roda de Chimarrao (fortalece quem esta perto), Ferreiro da Estancia e Peao Domador.
+
+## Bichos
+
+- **Bando do campo:** Prea, Perdiz, Lebre, Caturrita e Ema (do mais lento ao mais rapido).
+- **Especiais:** Graxaim (furtivo), Tuco-tuco (imune a explosao), Pinguim (imune a frio), Sapo-cururu (imune a fogo e magica), Tatu (blindado, solta 4 tatuzinhos), Zorrilho, Gamba (solta filhotes) e Capivara (traz 2 gambas nas costas).
+- **Bichos grandes:** Javali, Javali Cinza, Javaporco, Jacare (furtivo e blindado) e o chefe final, Rei Javaporco.
+- **Chefes de evento:** Nuvem de Gafanhotos (larga gafanhotos pelo caminho) e Enxame de Borrachudos (furtivo, se divide quando apanha).
 
 ## Pontuacao e ranking
 
@@ -65,6 +82,7 @@ Tiros, acertos, morte dos animais, dano no galpao e os jingles de vitoria/derrot
 - `Assets/Scripts/InimigoGaucho.cs`: movimento, lentidao, congelamento, queimadura, empurrao e regeneracao dos bichos.
 - `Assets/Scripts/TorreGaucha.cs`: ataques (projetil, radial, pulso, instantaneo, corpo a corpo, bumerangue, ponto fixo), movimento e especiais.
 - `Assets/Scripts/SpritesGaucho.cs`: pixel art dos bichos, armas e projeteis gerada em codigo.
+- `Assets/Scripts/LagoaGaucho.cs`: a lagoa do mapa (desenho e regra de quem pode ficar na agua).
 - `Assets/Scripts/Projetil.cs` + prefabs em `Assets/Resources/`: projeteis com colisao, perfuracao, ricochete, bumerangue e caminho.
 - `Assets/Scripts/Ranking.cs`: pontuacao das partidas salva no PlayerPrefs (top 10).
 - `Assets/Scripts/EfeitosSonoros.cs`: sons de acerto, morte, dano no galpao, vitoria e derrota.

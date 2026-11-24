@@ -21,7 +21,7 @@ public sealed class TorreGaucha : MonoBehaviour
     InimigoGaucho alvo;
     readonly List<InimigoGaucho> alvos = new List<InimigoGaucho>();
     readonly int[] niveis = new int[3];
-    readonly Dictionary<TipoEspecial, float> proximoEspecial = new Dictionary<TipoEspecial, float>();
+    readonly Dictionary<string, float> proximoEspecial = new Dictionary<string, float>();
     readonly List<SpriteRenderer> seguidores = new List<SpriteRenderer>();
     Sprite[] quadrosCavalo;
     Sprite[] quadrosCusco;
@@ -524,17 +524,18 @@ public sealed class TorreGaucha : MonoBehaviour
             if (especial.porOnda || especial.tipo == TipoEspecial.Almas)
                 continue;
 
+            string chave = especial.tipo + especial.chave;
             float proximo;
-            if (!proximoEspecial.TryGetValue(especial.tipo, out proximo))
+            if (!proximoEspecial.TryGetValue(chave, out proximo))
             {
-                proximoEspecial[especial.tipo] = Time.time + especial.intervalo * 0.4f;
+                proximoEspecial[chave] = Time.time + especial.intervalo * 0.4f;
                 continue;
             }
             if (Time.time < proximo || !jogo.OndaEmAndamento)
                 continue;
 
             bool usou = jogo.UsarEspecial(this, especial);
-            proximoEspecial[especial.tipo] = Time.time + (usou ? especial.intervalo / FatorDeCadencia : 0.35f);
+            proximoEspecial[chave] = Time.time + (usou ? especial.intervalo / FatorDeCadencia : 0.35f);
         }
     }
 

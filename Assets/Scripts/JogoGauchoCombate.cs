@@ -94,7 +94,7 @@ public sealed partial class JogoGaucho
 
     bool NaAgua(Vector3 posicao, float margem)
     {
-        return false;
+        return lagoa != null && lagoa.Contem(posicao, margem);
     }
 
     Material MaterialDeEfeito()

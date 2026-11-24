@@ -66,6 +66,7 @@ public enum TipoEspecial
 public sealed class Especial
 {
     public TipoEspecial tipo;
+    public string chave = "";
     public float intervalo = 5f;
     public float raio = 1f;
     public float duracao = 2f;
@@ -176,14 +177,14 @@ public sealed class AtributosTorre
     public bool miraNoMouse;
     public readonly List<Especial> especiais = new List<Especial>();
 
-    public Especial Pegar(TipoEspecial tipo)
+    public Especial Pegar(TipoEspecial tipo, string chave = "")
     {
         for (int i = 0; i < especiais.Count; i++)
         {
-            if (especiais[i].tipo == tipo)
+            if (especiais[i].tipo == tipo && especiais[i].chave == chave)
                 return especiais[i];
         }
-        Especial novo = new Especial { tipo = tipo };
+        Especial novo = new Especial { tipo = tipo, chave = chave };
         especiais.Add(novo);
         return novo;
     }
