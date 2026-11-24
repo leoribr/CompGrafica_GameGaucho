@@ -437,15 +437,15 @@ Quando o Rei Javaporco passa de 66% e depois de 33% da vida, ele fica blindado p
 
 ## Checklist da entrega e da apresentação
 
-Falta um item para a entrega ficar completa: o link do vídeo no README. O executável já está na Release do GitHub, e a v1.1 traz as novidades desta versão.
+A entrega no GitHub está completa: o README tem o link do executável, que fica na Release v1.2, e o do vídeo no YouTube.
 
 ### Entrega no GitHub
 
 - [x] Criar uma Release no GitHub e anexar o `Builds/GameGaucho_Windows.zip` (35 MB), que fica fora do git.
 - [x] Trocar "\[link do executavel aqui\]" no README pelo link da Release.
-- [ ] Publicar a Release v1.1 com o zip novo (o link do README continua valendo, porque aponta para a última Release).
-- [ ] Gravar o vídeo demonstrativo mostrando o que a demonstração ao vivo não alcança: bichos grandes soltando filhotes, Pescador e Iara na lagoa, gaúchos no nível 5 e o Rei Javaporco.
-- [ ] Subir o vídeo e trocar "\[link do video aqui\]" no README pelo link.
+- [x] Publicar as Releases v1.1 e v1.2 com o zip novo (o link do README continua valendo, porque aponta para a última Release).
+- [x] Gravar o vídeo demonstrativo mostrando o que a demonstração ao vivo não alcança: bichos grandes soltando filhotes, Pescador e Iara na lagoa, gaúchos no nível 5 e o Rei Javaporco.
+- [x] Subir o vídeo no YouTube e trocar "\[link do video aqui\]" no README pelo link.
 - [ ] Conferir que o professor (rafaelrieder) tem acesso ao repositório.
 - [ ] Conferir que os três aparecem como autores: Guilherme, Pedro e Leonardo têm commits no histórico.
 - [ ] Guilherme e Pedro darem `git pull` antes de qualquer mudança nova.
