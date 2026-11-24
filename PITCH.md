@@ -1,6 +1,6 @@
 # Game Gaúcho: roteiro do pitch e guia do código
 
-Versão do jogo: 1.1 · atualizado em 24/11/2026
+Versão do jogo: 1.2 · atualizado em 24/11/2026
 
 ## Roteiro do pitch
 
@@ -37,7 +37,7 @@ São cinco blocos em 10 minutos: Leonardo abre e joga, Guilherme explica o jogo 
 - "Usamos o template Universal 2D do Unity 6, com câmera ortográfica, que não tem perspectiva."
 - "Quase toda a arte nova é gerada em código: um desenho feito de caracteres vira pixels numa Texture2D, com filtro Point para não borrar e 16 pixels por unidade."
 - "A ordem de desenho vem do sortingOrder: chão e flores embaixo, depois lagoa, construções, bichos, gaúchos, arma e o avião por cima de tudo."
-- "Os bichos são transladados pelo caminho, a arma gira para o alvo com Atan2 e a escala muda o tamanho de cada bicho. O gaúcho também muda de visual nos níveis 3, 4 e 5."
+- "Os bichos são transladados pelo caminho, a arma gira para o alvo com Atan2 e a escala muda o tamanho de cada bicho. O gaúcho também muda de visual com cada melhoria, como as duas garruchas do Revólver."
 - "Cor e transparência mostram estado: o furtivo fica com alfa 0,42, e congelado, queimando ou lento ganham tons próprios."
 - "A cena usa as luzes 2D do URP, e um shader escrito por nós desenha o contorno do gaúcho selecionado e faz o bicho piscar branco quando apanha."
 
@@ -225,7 +225,7 @@ O jogo é 2D, mas passa pelos conceitos da disciplina: coordenadas, transformaç
 | Conversão de coordenadas | `ScreenToWorldPoint`, `WorldToScreenPoint`, `WorldToViewportPoint`, `InverseTransformPoint`, `InverseTransformVector` | clique no mapa, barras de vida, bordas da tela, mordida do cusco, recuo da arma |
 | Cor e transparência | `SpriteRenderer.color` | furtivo com alfa 0,42, prévia verde ou vermelha, tons de congelado, atordoado, queimando, lento e blindado |
 | Iluminação 2D | `Light2D` do URP em `PrepararLuzes` e `CriarLuzTemporaria` | luz global mais fraca, assado e galpão acesos, clarão nas explosões, nos tiros e nos projéteis de fogo e mágica |
-| Shader | `Assets/Resources/SpriteEfeito.shader` | contorno no gaúcho selecionado e piscar branco quando o bicho apanha |
+| Shader | `Assets/Resources/SpriteEfeito.shader` | contorno branco no gaúcho selecionado, dourado no nível 5 e piscar branco quando o bicho apanha |
 | Sombras | um filho com o sprite de círculo em cada bicho e gaúcho | elipse preta semitransparente embaixo de cada um |
 | Tremor de câmera | `TremerCamera` e `AtualizarTremor` | explosões grandes, chegada de chefe e fase do chefe |
 | Animação | `InimigoGaucho.Animar`, `TorreGaucha.AnimarExtras` | troca de sprite a cada 0,15 s (0,12 s no cavalo); pandorga e aura com seno |
@@ -244,7 +244,7 @@ O jogo é 2D, mas passa pelos conceitos da disciplina: coordenadas, transformaç
 
 ### Câmera e pixel perfeito
 
-- O tamanho ortográfico é metade da altura visível: 5,625 mostra 11,25 unidades. Com 16 pixels por unidade, são 180 pixels de arte na vertical; numa tela de 1080 linhas, cada pixel da arte vira um bloco de 6 × 6.
+- O tamanho ortográfico é metade da altura visível: 5,625 mostra 11,25 unidades. Quem fixa esse valor é o componente Pixel Perfect Camera do URP, com resolução de referência de 320 × 180 e 16 pixels por unidade. Com 16 pixels por unidade, são 180 pixels de arte na vertical; numa tela de 1080 linhas, cada pixel da arte vira um bloco de 6 × 6.
 - A largura visível é tamanho × 2 × aspecto, como o `AmbienteGaucho` calcula: 20 unidades em 16:9.
 - `FilterMode.Point` pega a cor do texel mais próximo. O filtro bilinear faria a média dos vizinhos e borraria as bordas.
 
@@ -267,7 +267,7 @@ O jogo é 2D, mas passa pelos conceitos da disciplina: coordenadas, transformaç
 - Sombra: cada bicho e cada gaúcho ganha um filho com o sprite de círculo, preto com alfa 0,3, achatado (escala 0,26 na vertical) e desenhado na camada 3. A do avião fica deslocada para baixo, como se ele estivesse no ar.
 - Recuo: por 0,09 s a arma volta até 0,07 unidade no sentido contrário ao tiro (`-arma.right`, levado ao espaço local com `InverseTransformVector`).
 - Tremor de câmera: a câmera ganha um deslocamento aleatório que cai até zero, sempre somado à posição original (`AtualizarTremor`).
-- Visual por nível (`AtualizarVisualDeNivel`): no nível 3 aparece uma insígnia com a cor do caminho; no 4 o lenço fica dourado e a insígnia cresce; no 5 surge uma aura que pulsa com seno, brilhos de partícula e o boneco fica 10% maior.
+- Visual por nível (`AtualizarVisualDeNivel`): cada melhoria aparece no boneco. São duas armas quando a melhoria dá duas (como o Par de Garruchas), cinturão de balas quando o tiro fica mais rápido, pena quando o alcance cresce, óculos quando passa a ver furtivo, arma maior quando o dano dobra e brilho na arma quando ganha fogo, frio ou mágica. Pelo nível, entra uma faixa no poncho com a cor do caminho no 3, chapéu dessa cor no 4 e, no 5, contorno dourado do shader, lenço dourado, brilhos e 10% a mais de tamanho. Corpos que não são gaúcho ganham uma bandeirola.
 
 ### Cor, transparência e efeitos
 
@@ -288,7 +288,7 @@ O jogo é 2D, mas passa pelos conceitos da disciplina: coordenadas, transformaç
 - `Assets/Resources/SpriteEfeito.shader` é um shader de vértice e fragmento escrito à mão. Ele fica em Resources para entrar no build e é carregado com `Resources.Load`.
 - Contorno: se o pixel é transparente e algum dos quatro vizinhos (a um texel de distância, usando `_MainTex_TexelSize`) é opaco, ele pinta a cor do contorno. Por isso os sprites gerados ganharam 1 pixel de borda transparente e malha `FullRect`.
 - Piscar branco: `lerp(cor, branco, _Branco)`. O bicho troca para esse material por 0,06 s quando apanha e depois volta ao material normal.
-- O gaúcho selecionado troca para o material de contorno (`Destacar`). Como o shader não recebe luz, ele também fica mais claro que os outros.
+- O gaúcho selecionado troca para o material de contorno (`Destacar`). O contorno branco marca a seleção e o dourado marca o nível 5. Como o shader não recebe luz, esses gaúchos também ficam mais claros.
 
 ### Som gerado por código
 
@@ -407,7 +407,7 @@ No fragment shader, um pixel transparente com algum vizinho opaco vira contorno 
 
 **Como o gaúcho muda com as melhorias?**
 
-`AtualizarVisualDeNivel` olha o maior nível: no 3 coloca uma insígnia com a cor do caminho, no 4 o lenço fica dourado, no 5 aparece uma aura que pulsa com seno e o boneco cresce 10%.
+`AtualizarVisualDeNivel` compara os atributos com os do nível 0 e desenha o que mudou: duas armas, cinturão de balas, pena, óculos, arma maior e brilho de elemento. O maior nível define o resto: faixa no poncho (3), chapéu com a cor do caminho (4) e contorno dourado (5). Os acessórios são camadas de 16 × 16 pixels por cima do boneco, com o mesmo pivô, então encaixam pixel a pixel.
 
 ### Mecânicas
 
