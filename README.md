@@ -22,21 +22,23 @@ No menu da para escolher o nivel (Facil, Normal ou Dificil), ver o ranking e as 
 ## Controles
 
 - **Espaco**: iniciar a proxima onda.
-- **1**: contratar gaucho de revolver (rapido).
-- **2**: contratar gaucho de espingarda (chumbo em leque: forte e acerta varios).
-- **Clique esquerdo**: posicionar o gaucho na grama.
-- **Clique direito** ou **Esc**: cancelar a construcao.
+- **Tab**: trocar a classe da loja (Peoes, Farrapos, Lendas, Estancia).
+- **1 a 7**: contratar o gaucho da classe aberta.
+- **Clique esquerdo**: posicionar o gaucho (o anel mostra o alcance) ou selecionar um gaucho ja contratado.
+- **Z, X, C**: comprar o proximo nivel do caminho 1, 2 ou 3 do gaucho selecionado.
+- **V**: vender o gaucho selecionado (devolve 70% do que foi gasto).
+- **P**: trocar a prioridade de alvo (primeiro, ultimo, mais perto, mais forte).
+- **Clique direito** ou **Esc**: cancelar a construcao ou tirar a selecao.
 - Botao **x1/x2**: alternar a velocidade.
 - **R**: reiniciar depois de uma vitoria ou derrota.
 - **M**: voltar ao menu depois de uma vitoria ou derrota.
 
 ## Objetivo da versao atual
 
-- Comece sem gauchos: contrate com **1** ou **2** e posicione onde quiser.
-- Defender o galpao por 6 ondas antes do tempo acabar (pilas, vidas e tempo dependem do nivel).
-- Animais eliminados rendem pilas.
-- Use as pilas para reforcar a defesa.
-- Javalis cinza sao mais resistentes e causam 2 de dano ao galpao.
+- Defender o galpao por 20 ondas antes do tempo acabar (pilas, vidas e tempo dependem do nivel).
+- Cada gaucho tem 3 caminhos de melhoria com 5 niveis; so um caminho passa do nivel 2.
+- Os bichos sao da fauna do RS e tem jeitos diferentes: furtivos (so quem ve furtivo mira neles), blindados (corte e bala comum nao furam), imunes a explosao, frio, fogo ou magica, teimosos (regeneram) e bichos grandes que soltam outros quando caem.
+- A ultima onda traz o Rei Javaporco: se ele chegar ao galpao, a partida acaba.
 
 ## Pontuacao e ranking
 
@@ -54,10 +56,16 @@ Tiros, acertos, morte dos animais, dano no galpao e os jingles de vitoria/derrot
 
 - `Assets/Scenes/Menu.unity` + `Assets/Scripts/MenuGaucho.cs`: menu principal (jogar, nivel, ranking, como jogar, sair).
 - `Assets/Scenes/Teste_PixelArt.unity`: mapa principal.
-- `Assets/Scripts/JogoGaucho.cs`: ondas, economia, HUD e construcao.
-- `Assets/Scripts/InimigoGaucho.cs`: vida e movimento dos inimigos.
-- `Assets/Scripts/TorreGaucha.cs`: mira, tiros e dano das torres.
-- `Assets/Scripts/Projetil.cs` + prefabs em `Assets/Resources/`: projeteis que voam ate o inimigo e causam dano na colisao (bala do revolver e chumbo em leque da espingarda).
+- `Assets/Scripts/JogoGaucho.cs`: ondas, economia, construcao, venda, melhorias e filhotes.
+- `Assets/Scripts/JogoGauchoCombate.cs`: mira com prioridade, imunidades, explosoes, especiais (rede, zona, laco, armadilha, espantalho), auras de apoio e efeitos visuais.
+- `Assets/Scripts/JogoGauchoInterface.cs`: HUD, loja por classe e painel com os 3 caminhos de melhoria.
+- `Assets/Scripts/TipoTorre.cs` + `TorresPeoes.cs`, `TorresFarrapos.cs`, `TorresLendas.cs`, `TorresEstancia.cs`: atributos e caminhos de melhoria de cada gaucho.
+- `Assets/Scripts/MelhoriasTorre.cs`: custo dos niveis, regra dos caminhos e valor de venda.
+- `Assets/Scripts/TipoInimigo.cs` + `OndasGaucho.cs`: bichos (vida, velocidade, imunidades, filhotes) e as 20 ondas.
+- `Assets/Scripts/InimigoGaucho.cs`: movimento, lentidao, congelamento, queimadura, empurrao e regeneracao dos bichos.
+- `Assets/Scripts/TorreGaucha.cs`: ataques (projetil, radial, pulso, instantaneo, corpo a corpo, bumerangue, ponto fixo), movimento e especiais.
+- `Assets/Scripts/SpritesGaucho.cs`: pixel art dos bichos, armas e projeteis gerada em codigo.
+- `Assets/Scripts/Projetil.cs` + prefabs em `Assets/Resources/`: projeteis com colisao, perfuracao, ricochete, bumerangue e caminho.
 - `Assets/Scripts/Ranking.cs`: pontuacao das partidas salva no PlayerPrefs (top 10).
 - `Assets/Scripts/EfeitosSonoros.cs`: sons de acerto, morte, dano no galpao, vitoria e derrota.
 - `Assets/Scripts/AmbienteGaucho.cs`: vida no cenario (fumaca e brasas do assado, sombras de nuvens, bandos de quero-quero com piado e ovelhas pastando), tudo gerado em codigo.

@@ -28,10 +28,9 @@ public sealed class Dificuldade
         this.multiplicadorPontuacao = multiplicadorPontuacao;
     }
 
-    // Tempo calibrado para sobrar cerca de 1 min no Normal e 30 s no Dificil para quem joga bem.
-    public static readonly Dificuldade Facil = new Dificuldade("Facil", 0.75f, 0.9f, 420, 30, 300f, 1f);
-    public static readonly Dificuldade Normal = new Dificuldade("Normal", 1f, 1f, 360, 20, 225f, 1.5f);
-    public static readonly Dificuldade Dificil = new Dificuldade("Dificil", 1.35f, 1.15f, 300, 12, 195f, 2f);
+    public static readonly Dificuldade Facil = new Dificuldade("Facil", 0.75f, 0.9f, 420, 40, 1080f, 1f);
+    public static readonly Dificuldade Normal = new Dificuldade("Normal", 1f, 1f, 360, 30, 900f, 1.5f);
+    public static readonly Dificuldade Dificil = new Dificuldade("Dificil", 1.35f, 1.15f, 300, 20, 780f, 2f);
 
     public static readonly Dificuldade[] Todas = { Facil, Normal, Dificil };
 

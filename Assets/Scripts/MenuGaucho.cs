@@ -166,16 +166,16 @@ public sealed class MenuGaucho : MonoBehaviour
     {
         Rect painel = PainelGrande(e, "COMO JOGAR");
         GUI.Label(new Rect(painel.x + 50f * e, painel.y + 100f * e, painel.width - 100f * e, painel.height - 200f * e),
-            "Os animais querem chegar ao galpao. Contrate gauchos, posicione na grama e segure todas as ondas antes do tempo acabar.\n\n" +
-            "1 / 2  -  contratar gaucho de revolver / espingarda\n" +
-            "Clique  -  posicionar (o anel mostra o alcance)\n" +
-            "Clique direito ou ESC  -  cancelar\n" +
-            "Clique no gaucho + U  -  melhorar\n" +
-            "Espaco  -  iniciar a proxima onda      x1/x2  -  velocidade\n\n" +
-            "Revolver ($90): tiro rapido em um alvo.\n" +
-            "Espingarda ($130): chumbo em leque, forte e de perto.\n\n" +
-            "O nivel muda a vida e a velocidade dos animais, as pilas, as vidas e o tempo da missao.\n" +
-            "Pontos: 10 por animal, 100 por onda e bonus de vitoria (vidas e tempo). Normal x1,5, Dificil x2.",
+            "A bicharada quer chegar ao galpão. Contrate gaúchos e segure as 20 ondas antes do tempo acabar.\n\n" +
+            "TAB: troca a classe da loja (Peões, Farrapos, Lendas, Estância)\n" +
+            "1 a 7: contrata o gaúcho da classe   |   Clique: posiciona   |   ESC: cancela\n" +
+            "Clique no gaúcho: Z, X e C melhoram os 3 caminhos   |   V vende   |   P troca o alvo\n" +
+            "Espaço: próxima onda   |   x1/x2: velocidade\n\n" +
+            "Cada gaúcho tem 3 caminhos de 5 níveis, e só um caminho passa do nível 2.\n" +
+            "Furtivos só aparecem para quem vê furtivo. Blindados não sentem corte nem bala.\n" +
+            "Bichos grandes soltam outros quando caem. Clique no charque para pegar as pilas.\n\n" +
+            "O nível muda a vida e a velocidade dos bichos, as pilas, as vidas e o tempo da missão.\n" +
+            "Pontos: 10 por bicho, 100 por onda e bônus de vitória. Normal x1,5, Difícil x2.",
             estiloTexto);
         GUI.Label(new Rect(painel.x + 50f * e, painel.yMax - 150f * e, painel.width - 100f * e, 52f * e),
             "Musica: \"Las Dos Fronteras\", de Patrick de Arteaga (patrickdearteaga.com) - CC-BY 4.0", estiloSubtitulo);
