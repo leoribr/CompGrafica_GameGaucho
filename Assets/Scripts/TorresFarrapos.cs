@@ -10,8 +10,59 @@ public static class TorresFarrapos
 
     public static void Adicionar(List<DefinicaoTorre> lista)
     {
+        lista.Add(Bombeador());
         lista.Add(Cavalo());
         lista.Add(Espingarda());
+    }
+
+    static DefinicaoTorre Bombeador()
+    {
+        return new DefinicaoTorre
+        {
+            nome = "Bombeador da Carabina",
+            descricao = "O batedor das guerras do sul: acerta qualquer bicho do mapa, um por vez (bala).",
+            classe = ClasseTorre.Farrapos,
+            preco = 120,
+            corPoncho = new Color(0.3f, 0.45f, 0.3f),
+            arma = "carabina",
+            comprimentoArma = 1f,
+            basico = a =>
+            {
+                a.modo = ModoAtaque.Instantaneo;
+                a.tipoDano = TipoDano.Bala;
+                a.dano = 2;
+                a.alcance = 99f;
+                a.intervalo = 1.6f;
+            },
+            nomesCaminhos = new[] { "Calibre Grosso", "Luneta", "Cartucheira" },
+            caminhos = new[]
+            {
+                new[]
+                {
+                    M("Bala Pesada", "Dano 4.", a => a.dano += 2),
+                    M("Ponta de Aço", "Fura blindagem.", a => a.furaBlindagem = true),
+                    M("Caça Grossa", "Dano 15.", a => a.dano += 11),
+                    M("Rifle de Javali", "Dano 30 e +15 em grandes.", a => { a.dano += 15; a.danoExtraGrandes += 15; }),
+                    M("Bombeador Lendário", "Dano 100 e o bicho grande atingido fica parado 1 s.", a => { a.dano += 70; a.atordoar = 1f; a.forca = 5; })
+                },
+                new[]
+                {
+                    M("Luneta", "Vê furtivo.", a => a.veFurtivo = true),
+                    M("Estilhaço", "A bala se parte em 4 estilhaços ao acertar.", a => a.estilhacos = 4),
+                    M("Bala que Desentoca", "Revela o bicho atingido e solta 6 estilhaços.", a => { a.revelaAoAcertar = true; a.estilhacos = 6; }),
+                    M("Vigia da Estância", "Atira 2x mais rápido quando há bicho perto do galpão.", a => { a.vigiaGalpao = true; a.multiplicadorVigia = 2f; }),
+                    M("Bombeador Chefe", "3x mais rápido perto do galpão, dano +2 e 10 estilhaços.", a => { a.multiplicadorVigia = 3f; a.estilhacos = 10; a.dano += 2; })
+                },
+                new[]
+                {
+                    M("Gatilho Leve", "Cadência +40%.", a => a.intervalo /= 1.4f),
+                    M("Ferrolho Rápido", "Cadência +40%.", a => a.intervalo /= 1.4f),
+                    M("Semiautomática", "Cadência x3.", a => a.intervalo /= 3f),
+                    M("Remessa de Munição", "A cada onda ganha um caixote de 40 pilas.", a => a.pilasPorOnda += 40),
+                    M("Bombeador da Fronteira", "Atira em 2 bichos por vez e o caixote vira 120 pilas.", a => { a.alvos = 2; a.pilasPorOnda += 80; })
+                }
+            }
+        };
     }
 
     static DefinicaoTorre Cavalo()

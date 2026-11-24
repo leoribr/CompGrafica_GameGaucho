@@ -11,8 +11,240 @@ public static class TorresPeoes
     public static void Adicionar(List<DefinicaoTorre> lista)
     {
         lista.Add(Peixeira());
+        lista.Add(Boleadeira());
+        lista.Add(Fogueteiro());
         lista.Add(Assador());
+        lista.Add(Minuano());
+        lista.Add(Lacador());
         lista.Add(Revolver());
+    }
+
+    static DefinicaoTorre Boleadeira()
+    {
+        return new DefinicaoTorre
+        {
+            nome = "Gaúcho da Boleadeira",
+            descricao = "A boleadeira gira em arco e volta, acertando vários no caminho (impacto: pega até blindado).",
+            classe = ClasseTorre.Peoes,
+            preco = 110,
+            corPoncho = new Color(0.45f, 0.7f, 0.35f),
+            arma = "boleadeira",
+            comprimentoArma = 0.4f,
+            basico = a =>
+            {
+                a.modo = ModoAtaque.Bumerangue;
+                a.tipoDano = TipoDano.Impacto;
+                a.dano = 1;
+                a.alcance = 2.4f;
+                a.intervalo = 1.2f;
+                a.perfuracao = 4;
+                a.velocidadeProjetil = 7f;
+                a.desenhoProjetil = "bolas";
+                a.giraProjetil = true;
+            },
+            nomesCaminhos = new[] { "Três-marias", "Enrosca-perna", "Braço Forte" },
+            caminhos = new[]
+            {
+                new[]
+                {
+                    M("Boleadeira Pesada", "Perfuração +4.", a => a.perfuracao += 4),
+                    M("Três-marias", "Dano +1 e perfuração +4.", a => { a.dano += 1; a.perfuracao += 4; }),
+                    M("Ricocheteira", "A boleadeira quica de bicho em bicho, até 10.", a => { a.modo = ModoAtaque.Projetil; a.ricochetes = 10; a.velocidadeProjetil = 9f; }),
+                    M("Bolas de Ferro", "Cadência +50%, ricochete mais rápido e +3 em grandes.", a => { a.intervalo /= 1.5f; a.velocidadeProjetil *= 1.3f; a.danoExtraGrandes += 3; }),
+                    M("Tempestade de Bolas", "Quica em até 50 bichos e dano +3.", a => { a.ricochetes = 50; a.dano += 3; })
+                },
+                new[]
+                {
+                    M("Cordas de Couro", "Bichos atingidos ficam 20% mais lentos por 1 s.", a => { a.lentidao = 0.2f; a.duracaoLentidao = 1f; }),
+                    M("Enrosca-perna", "15% de chance de derrubar o bicho pequeno por 1 s.", a => { a.atordoar = 1f; a.chanceAtordoar = 0.15f; a.forca = 1; }),
+                    M("Boleadeira Dupla", "Joga 2 por vez e derruba também os especiais.", a => { a.quantidade = 2; a.abertura = 30f; a.forca = 2; }),
+                    M("Tombo Garantido", "Todo acerto derruba por 0,5 s e deixa 30% mais lento.", a => { a.chanceAtordoar = 1f; a.atordoar = 0.5f; a.lentidao = 0.3f; }),
+                    M("Rei da Boleadeira", "Derruba até bichos grandes por 1 s.", a => { a.forca = 4; a.atordoar = 1f; })
+                },
+                new[]
+                {
+                    M("Braço Longo", "Alcance +20%.", a => a.alcance *= 1.2f),
+                    M("Giro Rápido", "Cadência +30%.", a => a.intervalo /= 1.3f),
+                    M("Arremesso de Longe", "Alcance +30% e a boleadeira voa mais rápido.", a => { a.alcance *= 1.3f; a.velocidadeProjetil *= 1.3f; }),
+                    M("Ventania de Bolas", "4 boleadeiras por vez, em direções diferentes.", a => { a.quantidade = 4; a.abertura = 90f; }),
+                    M("Boleador do Pampa", "Boleadeiras girando em volta dele sem parar (dano 2 a cada 0,3 s).", a =>
+                    {
+                        Especial e = a.Pegar(TipoEspecial.Pulso);
+                        e.intervalo = 0.3f;
+                        e.raio = 1.3f;
+                        e.cor = new Color(0.9f, 0.8f, 0.6f, 0.45f);
+                        e.ataque = new AtributosTorre { tipoDano = TipoDano.Impacto, dano = 2 };
+                    })
+                }
+            }
+        };
+    }
+
+    static DefinicaoTorre Fogueteiro()
+    {
+        return new DefinicaoTorre
+        {
+            nome = "Fogueteiro",
+            descricao = "Rojão que explode numa área (explosão). Não pega Tuco-tuco, Zorrilho nem Jacaré.",
+            classe = ClasseTorre.Peoes,
+            preco = 140,
+            corPoncho = new Color(0.95f, 0.8f, 0.25f),
+            arma = "rojao",
+            comprimentoArma = 0.55f,
+            basico = a =>
+            {
+                a.modo = ModoAtaque.Projetil;
+                a.tipoDano = TipoDano.Explosao;
+                a.dano = 1;
+                a.alcance = 2.6f;
+                a.intervalo = 1.4f;
+                a.raioExplosao = 0.7f;
+                a.velocidadeProjetil = 6f;
+                a.desenhoProjetil = "foguete";
+            },
+            nomesCaminhos = new[] { "Rojão Maior", "Pavio Curto", "Cacho de Bombas" },
+            caminhos = new[]
+            {
+                new[]
+                {
+                    M("Pólvora Extra", "Área da explosão +30%.", a => a.raioExplosao *= 1.3f),
+                    M("Rojão de 12 Tiros", "Dano +1 e área +20%.", a => { a.dano += 1; a.raioExplosao *= 1.2f; }),
+                    M("Bombão de São João", "Dano +2, área +30% e atordoa os pequenos por 0,3 s.", a => { a.dano += 2; a.raioExplosao *= 1.3f; a.atordoar = 0.3f; a.forca = 1; }),
+                    M("Morteiro de Festa", "Dano +3 e empurra os bichos pequenos.", a => { a.dano += 3; a.empurrar = 0.5f; }),
+                    M("Fogos de Ano-Novo", "Explosão gigante (área x1,8, dano +6) que atordoa até os grandes.", a => { a.raioExplosao *= 1.8f; a.dano += 6; a.atordoar = 1f; a.forca = 4; })
+                },
+                new[]
+                {
+                    M("Pavio Curto", "Cadência +25%.", a => a.intervalo /= 1.25f),
+                    M("Acendedor Rápido", "Cadência +25% e alcance +10%.", a => { a.intervalo /= 1.25f; a.alcance *= 1.1f; }),
+                    M("Busca-pé", "O rojão fica mais rápido e nunca erra o alvo.", a => { a.teleguiado = true; a.velocidadeProjetil *= 1.5f; }),
+                    M("Bateria de Busca-pés", "3 busca-pés por disparo.", a => { a.quantidade = 3; a.abertura = 18f; }),
+                    M("Festa do Interior", "6 busca-pés e +10 de dano em grandes.", a => { a.quantidade = 6; a.abertura = 14f; a.danoExtraGrandes += 10; })
+                },
+                new[]
+                {
+                    M("Estilhaços", "A explosão solta 8 estilhaços de corte.", a => a.estilhacos = 8),
+                    M("Cacho de Bombinhas", "Os estilhaços viram bombinhas que explodem.", a => a.estilhacosExplodem = true),
+                    M("Bombinha em Cadeia", "12 bombinhas e dano +1.", a => { a.estilhacos = 12; a.dano += 1; }),
+                    M("Pólvora Especial", "Passa a acertar quem é imune a explosão.", a => a.ignoraImunidades = true),
+                    M("Chuva de Rojões", "20 bombinhas, dano +3 e área +30%.", a => { a.estilhacos = 20; a.dano += 3; a.raioExplosao *= 1.3f; })
+                }
+            }
+        };
+    }
+
+    static DefinicaoTorre Minuano()
+    {
+        return new DefinicaoTorre
+        {
+            nome = "Gaúcho do Minuano",
+            descricao = "Sopra o vento frio e congela os bichos em volta (frio). Não congela Pinguim, Zorrilho nem bichos grandes.",
+            classe = ClasseTorre.Peoes,
+            preco = 150,
+            corPoncho = new Color(0.6f, 0.8f, 0.95f),
+            corLenco = new Color(0.9f, 0.95f, 1f),
+            basico = a =>
+            {
+                a.modo = ModoAtaque.Pulso;
+                a.tipoDano = TipoDano.Frio;
+                a.dano = 1;
+                a.alcance = 1.6f;
+                a.intervalo = 2f;
+                a.congelar = 1f;
+                a.forca = 2;
+            },
+            nomesCaminhos = new[] { "Geada", "Vento Encanado", "Pingente" },
+            caminhos = new[]
+            {
+                new[]
+                {
+                    M("Geada Forte", "Congela 0,5 s a mais.", a => a.congelar += 0.5f),
+                    M("Geada Negra", "Depois de descongelar, o bicho fica 50% mais lento por 2 s.", a => { a.lentidao = 0.5f; a.duracaoLentidao = a.congelar + 2f; }),
+                    M("Granizo", "Dano +2.", a => a.dano += 2),
+                    M("Frio de São José dos Ausentes", "Congela até bichos grandes e dano +2.", a => { a.forca = 4; a.dano += 2; }),
+                    M("Neve na Serra", "Congelados tomam o dobro de dano de qualquer gaúcho.", a => { a.marca = 1f; a.duracaoMarca = a.congelar + 0.5f; a.forca = 5; })
+                },
+                new[]
+                {
+                    M("Ventania", "Alcance +20%.", a => a.alcance *= 1.2f),
+                    M("Vento Gelado", "Todo bicho no alcance fica 30% mais lento.", a => a.lentidaoNoAlcance = 0.3f),
+                    M("Geada Branca", "Revela os furtivos no alcance.", a => a.revelaRaio = a.alcance),
+                    M("Frente Fria", "Lentidão de 45% e bichos no alcance tomam +25% de dano.", a => { a.lentidaoNoAlcance = 0.45f; a.marcaNoAlcance = 0.25f; }),
+                    M("Massa de Ar Polar", "Alcance +50% e 50% de lentidão no alcance.", a => { a.alcance *= 1.5f; a.lentidaoNoAlcance = 0.5f; a.revelaRaio = a.alcance; })
+                },
+                new[]
+                {
+                    M("Gelo Afiado", "Dano +1.", a => a.dano += 1),
+                    M("Lança de Gelo", "Passa a atirar pingentes de longe, que congelam por um instante.", a =>
+                    {
+                        a.modo = ModoAtaque.Projetil;
+                        a.alcance *= 1.8f;
+                        a.intervalo = 0.9f;
+                        a.perfuracao = 3;
+                        a.congelar = Mathf.Max(0.5f, a.congelar * 0.5f);
+                        a.velocidadeProjetil = 10f;
+                        a.desenhoProjetil = "gelo";
+                    }),
+                    M("Estilhaço de Gelo", "Os pingentes se partem em 4 estilhaços ao acertar.", a => a.estilhacos = 4),
+                    M("Gelo Eterno", "Congela até bichos grandes e +4 de dano neles.", a => { a.forca = 4; a.danoExtraGrandes += 4; }),
+                    M("Era do Gelo no Pampa", "Pingentes enormes: dano +6, perfuração +10 e congelam 1 s.", a => { a.dano += 6; a.perfuracao += 10; a.escalaProjetil = 2f; a.congelar = 1f; })
+                }
+            }
+        };
+    }
+
+    static DefinicaoTorre Lacador()
+    {
+        return new DefinicaoTorre
+        {
+            nome = "Laçador",
+            descricao = "Joga o laço no bicho da frente: fica 50% mais lento por 2 s (bichos grandes sentem metade).",
+            classe = ClasseTorre.Peoes,
+            preco = 90,
+            corPoncho = new Color(0.65f, 0.45f, 0.3f),
+            arma = "laco",
+            comprimentoArma = 0.4f,
+            basico = a =>
+            {
+                a.modo = ModoAtaque.Projetil;
+                a.tipoDano = TipoDano.Impacto;
+                a.dano = 0;
+                a.alcance = 2.3f;
+                a.intervalo = 1f;
+                a.lentidao = 0.5f;
+                a.duracaoLentidao = 2f;
+                a.velocidadeProjetil = 8f;
+                a.desenhoProjetil = "lacada";
+            },
+            nomesCaminhos = new[] { "Laço Firme", "Laço com Espinho", "Armada Larga" },
+            caminhos = new[]
+            {
+                new[]
+                {
+                    M("Couro Cru", "A lentidão dura 3 s.", a => a.duracaoLentidao = 3f),
+                    M("Laço Trançado", "Pega 2 bichos por vez.", a => a.perfuracao = 2),
+                    M("Pealo", "Cada laçada derruba o bicho por 1 s.", a => { a.atordoar = 1f; a.forca = 2; }),
+                    M("Tiro de Laço", "Laça 5 bichos por vez e derruba.", a => a.perfuracao = 5),
+                    M("Campeão do Rodeio", "Laça até bichos grandes e segura por 1,5 s.", a => { a.forca = 4; a.atordoar = 1.5f; })
+                },
+                new[]
+                {
+                    M("Laço de Arame", "Laçados tomam 1 de dano por segundo.", a => { a.queimaDano = 1; a.queimaDuracao = 3f; a.tipoQueima = TipoDano.Corte; }),
+                    M("Laço com Roseta", "2 de dano por segundo, e acerta o Tatu.", a => { a.queimaDano = 2; a.tipoQueima = TipoDano.Impacto; }),
+                    M("Laço que Aperta", "5 de dano por segundo.", a => a.queimaDano = 5),
+                    M("Correntão", "8 de dano por segundo e laçados tomam +30% de dano de todos.", a => { a.queimaDano = 8; a.marca = 0.3f; a.duracaoMarca = 3f; }),
+                    M("Nó Gaúcho", "12 de dano por segundo e os filhotes de quem cai já nascem laçados.", a => { a.queimaDano = 12; a.contagiaFilhotes = true; })
+                },
+                new[]
+                {
+                    M("Armada Grande", "Alcance +25%.", a => a.alcance *= 1.25f),
+                    M("Laçada Rápida", "Cadência +40%.", a => a.intervalo /= 1.4f),
+                    M("Laço em Rede", "Laça todos os bichos de uma área pequena.", a => a.raioExplosao = 0.6f),
+                    M("Laçada de Tropa", "Área maior e lentidão de 70%.", a => { a.raioExplosao = 0.9f; a.lentidao = 0.7f; }),
+                    M("Grande Laçada", "A cada 2,5 s laça todos os bichos do alcance.", a => { a.modo = ModoAtaque.Pulso; a.intervalo = 2.5f; a.raioExplosao = 0f; })
+                }
+            }
+        };
     }
 
     static DefinicaoTorre Peixeira()

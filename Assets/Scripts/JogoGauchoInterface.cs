@@ -448,6 +448,15 @@ public sealed partial class JogoGaucho
     string DescreverAtributos(TorreGaucha torre)
     {
         AtributosTorre a = torre.Efetivo;
+        if (a.modo == ModoAtaque.Nenhum && a.Tem(TipoEspecial.Armadilha))
+        {
+            Especial rosetas = a.Pegar(TipoEspecial.Armadilha);
+            string armadilha = "Espalha rosetas: dano " + rosetas.ataque.dano + ", cada monte fura " + rosetas.ataque.perfuracao
+                + " bichos, a cada " + (rosetas.intervalo / torre.FatorDeCadencia).ToString("0.0") + "s";
+            if (rosetas.ataque.furaBlindagem)
+                armadilha += "   [fura blindagem]";
+            return armadilha;
+        }
         if (a.modo == ModoAtaque.Nenhum)
         {
             string apoio = "Não ataca.";
