@@ -1,11 +1,24 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 public sealed class TorreGaucha : MonoBehaviour
 {
     static AudioClip somRevolver;
     static AudioClip somEspingarda;
     static AudioClip somArremesso;
+    static readonly Color[] CoresDosCaminhos = { new Color(0.95f, 0.35f, 0.28f), new Color(0.35f, 0.6f, 0.98f), new Color(0.42f, 0.85f, 0.4f) };
+
+    SpriteRenderer sombra;
+    SpriteRenderer insignia;
+    SpriteRenderer aura;
+    SpriteRenderer clarao;
+    Light2D luzDoTiro;
+    Material materialDoCorpo;
+    Vector3 armaBase;
+    float recuoAte;
+    float claraoAte;
+    float proximoBrilho;
 
     JogoGaucho jogo;
     Transform arma;
@@ -130,6 +143,8 @@ public sealed class TorreGaucha : MonoBehaviour
         corpoRenderer = GetComponent<SpriteRenderer>();
         arma = transform.Find("Arma");
         armaRenderer = arma != null ? arma.GetComponent<SpriteRenderer>() : null;
+        armaBase = arma != null ? arma.localPosition : Vector3.zero;
+        PrepararSombra();
         if (Definicao.usaModeloDaCena)
             return;
 
@@ -181,6 +196,99 @@ public sealed class TorreGaucha : MonoBehaviour
             pandorga = CriarFilho("Pandorga", SpritesGaucho.Pegar("pandorga"), new Vector3(0.6f, 1f, 0f), 1f, 27).transform;
             pandorgaBase = pandorga.localPosition;
         }
+        if (arma != null)
+            armaBase = arma.localPosition;
+    }
+
+    void PrepararSombra()
+    {
+        bool aviao = Definicao.corpo == "aviao";
+        sombra = CriarFilho("Sombra", SpritesGaucho.Circulo(), aviao ? new Vector3(0.25f, -0.9f, 0f) : new Vector3(0f, -0.42f, 0f), 1f, 3);
+        sombra.transform.localScale = aviao ? new Vector3(0.7f, 0.22f, 1f) : new Vector3(0.78f, 0.26f, 1f);
+        sombra.color = new Color(0f, 0f, 0f, aviao ? 0.16f : 0.3f);
+    }
+
+    void AtualizarVisualDeNivel()
+    {
+        if (EhPrevia || Ajudante || corpoRenderer == null)
+            return;
+        int caminho = 0;
+        for (int c = 1; c < 3; c++)
+        {
+            if (niveis[c] > niveis[caminho])
+                caminho = c;
+        }
+        int nivel = niveis[caminho];
+
+        if (nivel >= 3)
+        {
+            if (insignia == null)
+                insignia = CriarFilho("Insignia", SpritesGaucho.Pegar("insignia"), new Vector3(0.34f, 0.3f, 0f), 1f, corpoRenderer.sortingOrder + 3);
+            insignia.color = CoresDosCaminhos[caminho];
+            insignia.transform.localScale = Vector3.one * (nivel >= 4 ? 1.35f : 1f);
+        }
+
+        if (!Definicao.usaModeloDaCena)
+        {
+            Color lenco = nivel >= 4 ? new Color(1f, 0.8f, 0.22f) : Definicao.corLenco;
+            string corpo = Definicao.corpo;
+            if (corpo == "gaucho" || corpo == "pescador" || corpo == "domador" || corpo == "pia")
+                corpoRenderer.sprite = SpritesGaucho.Gaucho(Definicao.corPoncho, lenco);
+            if (gineteRenderer != null)
+                gineteRenderer.sprite = SpritesGaucho.Gaucho(Definicao.corPoncho, lenco);
+        }
+
+        if (nivel >= 5)
+        {
+            if (aura == null)
+            {
+                aura = CriarFilho("Aura", SpritesGaucho.Circulo(), Vector3.zero, 1.5f, 4);
+                if (jogo != null)
+                    aura.sharedMaterial = jogo.MaterialDeEfeito();
+            }
+            transform.localScale = Vector3.one * Definicao.escalaCorpo * 1.1f;
+        }
+    }
+
+    void EfeitoDeDisparo(AtributosTorre e)
+    {
+        if (arma == null || armaRenderer == null || !armaRenderer.enabled)
+            return;
+        recuoAte = Time.time + 0.09f;
+        if (e.tipoDano != TipoDano.Bala && e.tipoDano != TipoDano.Explosao)
+            return;
+        if (clarao == null)
+        {
+            clarao = CriarFilho("Clarao", SpritesGaucho.Circulo(), Vector3.zero, 0.34f, armaRenderer.sortingOrder + 1);
+            clarao.color = new Color(1f, 0.92f, 0.55f, 0.95f);
+            GameObject luz = new GameObject("Luz do tiro");
+            luz.transform.SetParent(transform, false);
+            luzDoTiro = luz.AddComponent<Light2D>();
+            if (jogo != null)
+            {
+                clarao.sharedMaterial = jogo.MaterialDeEfeito();
+                jogo.PrepararLuz(luzDoTiro, new Color(1f, 0.8f, 0.45f), 1.1f, 1.3f);
+            }
+        }
+        Vector3 boca = BocaDaArma();
+        clarao.transform.position = boca;
+        luzDoTiro.transform.position = boca;
+        claraoAte = Time.time + 0.06f;
+    }
+
+    public void Destacar(bool ligado)
+    {
+        Material contorno = SpritesGaucho.MaterialContorno();
+        if (corpoRenderer == null || contorno == null)
+            return;
+        if (ligado)
+        {
+            if (corpoRenderer.sharedMaterial != contorno)
+                materialDoCorpo = corpoRenderer.sharedMaterial;
+            corpoRenderer.sharedMaterial = contorno;
+        }
+        else if (materialDoCorpo != null)
+            corpoRenderer.sharedMaterial = materialDoCorpo;
     }
 
     SpriteRenderer CriarFilho(string nome, Sprite sprite, Vector3 posicaoLocal, float escala, int ordem)
@@ -210,6 +318,7 @@ public sealed class TorreGaucha : MonoBehaviour
         Atributos = a;
         AtualizarEfetivo();
         AtualizarSeguidores();
+        AtualizarVisualDeNivel();
     }
 
     public void Melhorar(int caminho, int custo)
@@ -608,6 +717,30 @@ public sealed class TorreGaucha : MonoBehaviour
 
     void AnimarExtras()
     {
+        if (arma != null)
+        {
+            float recuo = Time.time < recuoAte ? (recuoAte - Time.time) / 0.09f * 0.07f : 0f;
+            arma.localPosition = recuo > 0f ? armaBase + transform.InverseTransformVector(-arma.right * recuo) : armaBase;
+        }
+        if (clarao != null)
+            clarao.enabled = Time.time < claraoAte;
+        if (luzDoTiro != null)
+            luzDoTiro.enabled = Time.time < claraoAte;
+        if (aura != null)
+        {
+            aura.color = new Color(1f, 0.85f, 0.3f, 0.2f + 0.12f * Mathf.Sin(Time.time * 3f));
+            if (Time.time >= proximoBrilho)
+            {
+                proximoBrilho = Time.time + 1.3f;
+                jogo.CriarEstouro(transform.position + Vector3.up * 0.25f, new Color(1f, 0.9f, 0.4f), 3, 0.35f);
+            }
+        }
+        if (sombra != null && Definicao.corpo == "aviao")
+        {
+            sombra.transform.position = transform.position + new Vector3(0.25f, -0.9f, 0f);
+            sombra.transform.rotation = Quaternion.identity;
+        }
+
         if (pandorga != null)
             pandorga.localPosition = pandorgaBase + new Vector3(Mathf.Sin(Time.time * 2f) * 0.1f, Mathf.Cos(Time.time * 1.6f) * 0.07f, 0f);
 
@@ -675,6 +808,7 @@ public sealed class TorreGaucha : MonoBehaviour
 
     void TocarSom(AtributosTorre e)
     {
+        EfeitoDeDisparo(e);
         if (audioSource == null)
             return;
         AudioClip clip;

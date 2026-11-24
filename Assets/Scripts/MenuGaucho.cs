@@ -14,7 +14,8 @@ public sealed class MenuGaucho : MonoBehaviour
     {
         Principal,
         Ranking,
-        ComoJogar
+        ComoJogar,
+        Opcoes
     }
 
     Painel painelAberto = Painel.Principal;
@@ -72,14 +73,23 @@ public sealed class MenuGaucho : MonoBehaviour
             DesenharRanking(e);
         else if (painelAberto == Painel.ComoJogar)
             DesenharComoJogar(e);
+        else if (painelAberto == Painel.Opcoes)
+            DesenharOpcoes(e);
         else
             DesenharPrincipal(e);
+    }
+
+    void DesenharOpcoes(float e)
+    {
+        Rect painel = PainelGrande(e, "OPÇÕES");
+        OpcoesGaucho.Desenhar(new Rect(painel.x + 120f * e, painel.y + 150f * e, painel.width - 240f * e, 0f), estiloTexto, estiloBotao, e);
+        BotaoVoltar(painel, e);
     }
 
     void DesenharPrincipal(float e)
     {
         float largura = 520f * e;
-        float altura = 600f * e;
+        float altura = 780f * e;
         Rect painel = new Rect((Screen.width - largura) * 0.5f, (Screen.height - altura) * 0.5f - 40f * e, largura, altura);
         GUI.Box(painel, GUIContent.none, estiloPainel);
 
@@ -100,6 +110,11 @@ public sealed class MenuGaucho : MonoBehaviour
         GUI.Label(new Rect(x, y - 14f * e, w, 30f * e), DescreverDificuldade(Dificuldade.Atual), estiloSubtitulo);
         y += 22f * e;
 
+        if (Botao(x, ref y, w, e, "MODO: " + ModoDeJogo.Atual.nome.ToUpperInvariant()))
+            ModoDeJogo.Alternar();
+        GUI.Label(new Rect(x, y - 14f * e, w, 30f * e), ModoDeJogo.Atual.descricao, estiloSubtitulo);
+        y += 22f * e;
+
         if (Botao(x, ref y, w, e, "RANKING"))
         {
             painelAberto = Painel.Ranking;
@@ -108,6 +123,8 @@ public sealed class MenuGaucho : MonoBehaviour
         }
         if (Botao(x, ref y, w, e, "COMO JOGAR"))
             painelAberto = Painel.ComoJogar;
+        if (Botao(x, ref y, w, e, "OPÇÕES"))
+            painelAberto = Painel.Opcoes;
         if (Botao(x, ref y, w, e, "SAIR"))
             Sair();
     }
@@ -128,12 +145,13 @@ public sealed class MenuGaucho : MonoBehaviour
             float x = painel.x + 60f * e;
             float y = painel.y + 100f * e;
             float linha = 38f * e;
-            LinhaRanking(x, y, e, "#", "PONTOS", "NIVEL", "RESULTADO", "DATA");
+            LinhaRanking(x, y, e, "#", "PONTOS", "NIVEL / MODO", "RESULTADO", "DATA");
             for (int i = 0; i < ranking.Count; i++)
             {
                 RegistroRanking r = ranking[i];
                 string resultado = r.vitoria ? "Vitoria" : "Derrota (onda " + (r.ondas + 1) + ")";
-                LinhaRanking(x, y + linha * (i + 1), e, (i + 1) + "o", r.pontos.ToString(), r.nivel, resultado, r.data);
+                string nivel = string.IsNullOrEmpty(r.modo) || r.modo == ModoDeJogo.Padrao.nome ? r.nivel : r.nivel + " / " + r.modo;
+                LinhaRanking(x, y + linha * (i + 1), e, (i + 1) + "o", r.pontos.ToString(), nivel, resultado, r.data);
             }
         }
 
@@ -155,11 +173,11 @@ public sealed class MenuGaucho : MonoBehaviour
     void LinhaRanking(float x, float y, float e, string posicao, string pontos, string nivel, string resultado, string data)
     {
         float altura = 34f * e;
-        GUI.Label(new Rect(x, y, 60f * e, altura), posicao, estiloTexto);
-        GUI.Label(new Rect(x + 70f * e, y, 120f * e, altura), pontos, estiloTexto);
-        GUI.Label(new Rect(x + 200f * e, y, 120f * e, altura), nivel, estiloTexto);
-        GUI.Label(new Rect(x + 330f * e, y, 250f * e, altura), resultado, estiloTexto);
-        GUI.Label(new Rect(x + 590f * e, y, 120f * e, altura), data, estiloTexto);
+        GUI.Label(new Rect(x, y, 50f * e, altura), posicao, estiloTexto);
+        GUI.Label(new Rect(x + 55f * e, y, 100f * e, altura), pontos, estiloTexto);
+        GUI.Label(new Rect(x + 160f * e, y, 245f * e, altura), nivel, estiloTexto);
+        GUI.Label(new Rect(x + 410f * e, y, 200f * e, altura), resultado, estiloTexto);
+        GUI.Label(new Rect(x + 615f * e, y, 110f * e, altura), data, estiloTexto);
     }
 
     void DesenharComoJogar(float e)
@@ -170,7 +188,9 @@ public sealed class MenuGaucho : MonoBehaviour
             "TAB: troca a classe da loja (Peões, Farrapos, Lendas, Estância)\n" +
             "1 a 7: contrata o gaúcho da classe   |   Clique: posiciona   |   ESC: cancela\n" +
             "Clique no gaúcho: Z, X e C melhoram os 3 caminhos   |   V vende   |   P troca o alvo\n" +
-            "Espaço: próxima onda   |   x1/x2: velocidade\n\n" +
+            "Espaço: próxima onda (durante a onda, chama a seguinte antes da hora)   |   A: início automático\n" +
+            "ESC: pausa   |   x1, x2 e x3: velocidade   |   Depois da vitória, L abre o jogo livre\n" +
+            "Modos: Só Peões, Metade das Pilas e Desafio (sem vender, com uma vida só) valem mais pontos.\n\n" +
             "Cada gaúcho tem 3 caminhos de 5 níveis, e só um caminho passa do nível 2.\n" +
             "Furtivos só aparecem para quem vê furtivo. Blindados não sentem corte nem bala.\n" +
             "Bichos grandes soltam outros quando caem. Clique no charque para pegar as pilas.\n\n" +

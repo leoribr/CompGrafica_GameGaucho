@@ -18,6 +18,12 @@ public sealed partial class JogoGaucho : MonoBehaviour
         public GrupoOnda grupo;
     }
 
+    sealed class OndaAtiva
+    {
+        public int numero;
+        public bool geracaoTerminou;
+    }
+
     const string CenaDoMenu = "Menu";
     const float VelocidadeBase = 1.4f;
     const float RaioDeSelecao = 0.7f;
@@ -29,6 +35,8 @@ public sealed partial class JogoGaucho : MonoBehaviour
     readonly List<TorreGaucha> torres = new List<TorreGaucha>();
     readonly List<SpriteRenderer> obstaculosDeConstrucao = new List<SpriteRenderer>();
     readonly HashSet<DefinicaoInimigo> bichosVistos = new HashSet<DefinicaoInimigo>();
+    readonly List<OndaAtiva> ondasAtivas = new List<OndaAtiva>();
+    readonly Dictionary<string, int> abatesDeVendidos = new Dictionary<string, int>();
 
     Camera cameraPrincipal;
     LagoaGaucho lagoa;
@@ -39,22 +47,28 @@ public sealed partial class JogoGaucho : MonoBehaviour
     GameObject modeloEspingarda;
     GameObject previaTorre;
     TorreGaucha selecionada;
+    TorreGaucha destacada;
     DefinicaoTorre definicaoEmConstrucao;
     bool posicaoPreviaValida;
     bool construindo;
     bool escolhendoAlvo;
-    bool ondaEmAndamento;
-    bool geracaoTerminou;
     bool tutorialAberto = true;
     bool jogoEncerrado;
     bool vitoria;
+    bool pausado;
+    bool jogoLivre;
+    bool inicioAutomatico;
+    float proximoInicioAutomatico = -1f;
     Dificuldade dificuldade;
+    ModoDeJogo modo;
     TempoMissao tempo;
     bool derrotaPorTempo;
     int vidas;
     int pilas;
     int ondaAtual;
     int eliminadosNoTotal;
+    int ondasConcluidas;
+    int pilasGanhas;
     int pontuacaoFinal;
     int posicaoNoRanking;
     float velocidadeDoJogo = 1f;
@@ -63,7 +77,13 @@ public sealed partial class JogoGaucho : MonoBehaviour
     float proximosGlobais;
 
     public bool PodeCombater => !jogoEncerrado;
-    public bool OndaEmAndamento => ondaEmAndamento;
+    public bool OndaEmAndamento => ondasAtivas.Count > 0;
+    public bool Pausado => pausado;
+    public bool JogoLivre => jogoLivre;
+    public ModoDeJogo Modo => modo;
+    public int OndasConcluidas => ondasConcluidas;
+    public int OndasAtivas => ondasAtivas.Count;
+    bool TemProximaOnda => jogoLivre || ondaAtual < TotalOndas;
     public bool JogoEncerrado => jogoEncerrado;
     public bool Vitoria => vitoria;
     public int Pilas => pilas;
@@ -80,9 +100,12 @@ public sealed partial class JogoGaucho : MonoBehaviour
         Time.timeScale = 1f;
 
         dificuldade = Dificuldade.Atual;
-        vidas = dificuldade.vidas;
+        modo = ModoDeJogo.Atual;
+        vidas = modo.umaVida ? 1 : dificuldade.vidas;
         pilas = dificuldade.pilasIniciais;
         tempo = new TempoMissao(dificuldade.tempoSegundos);
+        inicioAutomatico = PlayerPrefs.GetInt("inicioAutomatico", 0) == 1;
+        OpcoesGaucho.Carregar();
 
         cameraPrincipal = Camera.main;
         if (cameraPrincipal == null)
@@ -91,6 +114,7 @@ public sealed partial class JogoGaucho : MonoBehaviour
             enabled = false;
             return;
         }
+        posicaoDaCamera = cameraPrincipal.transform.position;
 
         if (!PrepararCaminho() || !PrepararInimigos() || !PrepararTorres())
         {
@@ -108,6 +132,7 @@ public sealed partial class JogoGaucho : MonoBehaviour
             galpao.gameObject.AddComponent<GalpaoGaucho>();
         PrepararObstaculosDeConstrucao();
         PrepararLagoa();
+        PrepararLuzes();
         gameObject.AddComponent<AmbienteGaucho>();
         ExibirAviso("Contrate gaúchos e clique em INICIAR ONDA quando estiver pronto", 6f);
     }
@@ -244,14 +269,20 @@ public sealed partial class JogoGaucho : MonoBehaviour
     void Update()
     {
         AtualizarAtalhos();
-        AtualizarSelecao();
-        AtualizarConstrucao();
+        if (!pausado)
+        {
+            AtualizarSelecao();
+            AtualizarConstrucao();
+        }
+        AtualizarDestaque();
         AtualizarAnelDeAlcance();
         AtualizarTextosFlutuantes();
         AtualizarEfeitos();
         AtualizarZonas();
         AtualizarArmadilhas();
         AtualizarPacotes();
+        AtualizarTremor();
+        AtualizarLuzes();
 
         if (Time.time >= proximosGlobais)
         {
@@ -259,10 +290,66 @@ public sealed partial class JogoGaucho : MonoBehaviour
             proximosGlobais = Time.time + 0.5f;
         }
 
-        if (ondaEmAndamento && geracaoTerminou && inimigosAtivos.Count == 0)
-            ConcluirOnda();
-
+        ConferirOndas();
+        ConferirInicioAutomatico();
         AtualizarTempo();
+    }
+
+    void AtualizarDestaque()
+    {
+        TorreGaucha alvo = jogoEncerrado ? null : selecionada;
+        if (alvo == destacada)
+            return;
+        if (destacada != null)
+            destacada.Destacar(false);
+        if (alvo != null)
+            alvo.Destacar(true);
+        destacada = alvo;
+    }
+
+    public void AlternarPausa()
+    {
+        if (jogoEncerrado)
+            return;
+        pausado = !pausado;
+        Time.timeScale = pausado ? 0f : velocidadeDoJogo;
+        if (pausado)
+            CancelarConstrucao();
+    }
+
+    public void AlternarInicioAutomatico()
+    {
+        inicioAutomatico = !inicioAutomatico;
+        PlayerPrefs.SetInt("inicioAutomatico", inicioAutomatico ? 1 : 0);
+        if (inicioAutomatico && ondaAtual > 0 && !OndaEmAndamento && TemProximaOnda)
+            proximoInicioAutomatico = Time.time + 1f;
+    }
+
+    void ConferirInicioAutomatico()
+    {
+        if (proximoInicioAutomatico < 0f || pausado || jogoEncerrado)
+            return;
+        if (!inicioAutomatico || OndaEmAndamento || !TemProximaOnda)
+        {
+            proximoInicioAutomatico = -1f;
+            return;
+        }
+        if (Time.time >= proximoInicioAutomatico)
+        {
+            proximoInicioAutomatico = -1f;
+            IniciarProximaOnda();
+        }
+    }
+
+    int AjustarRenda(int valor)
+    {
+        return modo.metadeDasPilas ? Mathf.Max(1, Mathf.RoundToInt(valor * 0.5f)) : valor;
+    }
+
+    void GanharPilas(int valor)
+    {
+        pilas += valor;
+        pilasGanhas += valor;
     }
 
     void AtualizarTempo()
@@ -338,6 +425,14 @@ public sealed partial class JogoGaucho : MonoBehaviour
     {
         if (torre == null || torre.Ajudante)
             return;
+        if (modo.semVender)
+        {
+            ExibirAviso("No modo Desafio não dá para vender", 2.5f);
+            return;
+        }
+        int abatesAntes;
+        abatesDeVendidos.TryGetValue(torre.Definicao.nome, out abatesAntes);
+        abatesDeVendidos[torre.Definicao.nome] = abatesAntes + torre.Abatidos;
         int valor = MelhoriasTorre.ValorDeVenda(torre.Gasto);
         pilas += valor;
         AdicionarTexto(torre.transform.position + Vector3.up * 0.5f, "+" + valor + " pilas", new Color(1f, 0.86f, 0.25f));
@@ -469,28 +564,34 @@ public sealed partial class JogoGaucho : MonoBehaviour
 
     public void IniciarProximaOnda()
     {
-        if (jogoEncerrado || ondaEmAndamento || ondaAtual >= TotalOndas)
+        if (jogoEncerrado || pausado || !TemProximaOnda)
             return;
 
         tutorialAberto = false;
         CancelarConstrucao();
+        bool antecipada = ondasAtivas.Count > 0;
         ondaAtual++;
         if (ondaAtual == 1)
             tempo.Iniciar();
-        ondaEmAndamento = true;
-        geracaoTerminou = false;
+        OndaAtiva onda = new OndaAtiva { numero = ondaAtual };
+        ondasAtivas.Add(onda);
+        proximoInicioAutomatico = -1f;
         RecalcularGlobais();
         foreach (TorreGaucha torre in torres)
         {
             if (torre != null)
                 torre.ComecoDaOnda();
         }
-        StartCoroutine(GerarOnda(OndasGaucho.Onda(ondaAtual)));
-        ExibirAviso(ondaAtual == TotalOndas ? "ÚLTIMA ONDA! O REI JAVAPORCO CHEGOU!" : "Onda " + ondaAtual + " começou!", 3f);
+        StartCoroutine(GerarOnda(onda));
+        if (!jogoLivre && ondaAtual == TotalOndas)
+            ExibirAviso("ÚLTIMA ONDA! O REI JAVAPORCO CHEGOU!", 3f);
+        else
+            ExibirAviso(antecipada ? "Onda " + ondaAtual + " chamada antes da hora!" : "Onda " + ondaAtual + " começou!", 3f);
     }
 
-    IEnumerator GerarOnda(GrupoOnda[] grupos)
+    IEnumerator GerarOnda(OndaAtiva onda)
     {
+        GrupoOnda[] grupos = OndasGaucho.Onda(onda.numero);
         List<EventoDaOnda> eventos = new List<EventoDaOnda>();
         foreach (GrupoOnda grupo in grupos)
         {
@@ -511,15 +612,17 @@ public sealed partial class JogoGaucho : MonoBehaviour
                 yield break;
 
             GrupoOnda g = evento.grupo;
-            CriarInimigo(g.bicho, pontos[0].position, 1, g.furtivo, g.teimoso, g.cascaGrossa);
+            CriarInimigo(g.bicho, pontos[0].position, 1, g.furtivo, g.teimoso, g.cascaGrossa, onda.numero);
+            if (g.bicho.chefe)
+                TremerCamera(0.12f, 0.45f);
             if (!bichosVistos.Contains(g.bicho))
             {
                 bichosVistos.Add(g.bicho);
-                if (ondaAtual > 1 || g.bicho != TiposInimigo.Prea)
+                if (onda.numero > 1 || g.bicho != TiposInimigo.Prea)
                     ExibirAviso("NOVO BICHO: " + g.bicho.nome + " (" + g.bicho.descricao + ")", 5f);
             }
         }
-        geracaoTerminou = true;
+        onda.geracaoTerminou = true;
     }
 
     ModeloInimigo ModeloDe(bool cinza)
@@ -532,7 +635,7 @@ public sealed partial class JogoGaucho : MonoBehaviour
         return null;
     }
 
-    InimigoGaucho CriarInimigo(DefinicaoInimigo definicao, Vector3 posicao, int pontoSeguinte, bool furtivo, bool teimoso, bool cascaGrossa)
+    InimigoGaucho CriarInimigo(DefinicaoInimigo definicao, Vector3 posicao, int pontoSeguinte, bool furtivo, bool teimoso, bool cascaGrossa, int onda)
     {
         ModeloInimigo modelo = ModeloDe(definicao.desenho == "javali_cinza");
         GameObject objeto = Instantiate(modelo.objeto, posicao, Quaternion.identity, grupoInimigos);
@@ -554,6 +657,8 @@ public sealed partial class JogoGaucho : MonoBehaviour
             quadros = modelo.quadros;
 
         float vidaBase = definicao.vida * dificuldade.multiplicadorVida;
+        if (onda > TotalOndas)
+            vidaBase *= 1f + 0.15f * (onda - TotalOndas);
         if (cascaGrossa)
             vidaBase *= 2f;
         if (definicao.Grande)
@@ -563,6 +668,7 @@ public sealed partial class JogoGaucho : MonoBehaviour
 
         objeto.SetActive(true);
         inimigo.Configurar(this, caminho, definicao, vida, velocidade, quadros, furtivo || definicao.furtivo, teimoso, cascaGrossa, posicao, pontoSeguinte);
+        inimigo.Onda = onda;
         if (definicao.coroa)
             AdicionarCoroa(objeto);
         inimigosAtivos.Add(inimigo);
@@ -607,7 +713,7 @@ public sealed partial class JogoGaucho : MonoBehaviour
     {
         bool furtivo = pai.Furtivo && !filho.Grande;
         bool teimoso = pai.Teimoso || pai.Definicao.filhosTeimosos;
-        InimigoGaucho novo = CriarInimigo(filho, posicao, pai.ProximoPonto, furtivo, teimoso, false);
+        InimigoGaucho novo = CriarInimigo(filho, posicao, pai.ProximoPonto, furtivo, teimoso, false, pai.Onda);
         if (ordem > 0)
             novo.Recuar(0.16f * ordem);
         if (pai.Contagia)
@@ -620,37 +726,92 @@ public sealed partial class JogoGaucho : MonoBehaviour
         }
     }
 
-    void ConcluirOnda()
+    void ConferirOndas()
     {
-        ondaEmAndamento = false;
-        geracaoTerminou = false;
-        foreach (TorreGaucha torre in torres)
+        for (int i = ondasAtivas.Count - 1; i >= 0 && !jogoEncerrado; i--)
         {
-            if (torre != null)
-                torre.FimDaOnda();
+            OndaAtiva onda = ondasAtivas[i];
+            if (!onda.geracaoTerminou || TemBichoDaOnda(onda.numero))
+                continue;
+            ondasAtivas.RemoveAt(i);
+            ConcluirOnda(onda.numero);
         }
-        ExpirarArmadilhas();
+    }
 
+    bool TemBichoDaOnda(int numero)
+    {
+        foreach (InimigoGaucho inimigo in inimigosAtivos)
+        {
+            if (inimigo != null && inimigo.Onda == numero)
+                return true;
+        }
+        return false;
+    }
+
+    void ConcluirOnda(int numero)
+    {
+        ondasConcluidas++;
+        ExpirarArmadilhas();
         if (vidas <= 0)
             return;
 
-        if (ondaAtual >= TotalOndas)
+        bool campoLimpo = ondasAtivas.Count == 0;
+        if (campoLimpo)
         {
-            jogoEncerrado = true;
-            vitoria = true;
-            tempo.Parar();
-            velocidadeDoJogo = 1f;
-            Time.timeScale = 1f;
-            RegistrarNoRanking();
-            EfeitosSonoros.Vitoria();
-            ExibirAviso("O galpão está salvo!", 5f);
+            foreach (TorreGaucha torre in torres)
+            {
+                if (torre != null)
+                    torre.FimDaOnda();
+            }
+        }
+
+        if (!jogoLivre && campoLimpo && ondaAtual >= TotalOndas)
+        {
+            Vencer();
             return;
         }
 
-        int bonus = 60 + ondaAtual * 12;
-        pilas += bonus;
+        int bonus = AjustarRenda(60 + numero * 12);
+        GanharPilas(bonus);
         PagarRendas();
-        ExibirAviso("Onda vencida! Bônus de " + bonus + " pilas", 4f);
+        ExibirAviso("Onda " + numero + " vencida! Bônus de " + bonus + " pilas", 4f);
+        if (campoLimpo && inicioAutomatico && TemProximaOnda)
+            proximoInicioAutomatico = Time.time + 2f;
+    }
+
+    void Vencer()
+    {
+        jogoEncerrado = true;
+        vitoria = true;
+        pausado = false;
+        tempo.Parar();
+        velocidadeDoJogo = 1f;
+        Time.timeScale = 1f;
+        RegistrarNoRanking();
+        EfeitosSonoros.Vitoria();
+        ExibirAviso("O galpão está salvo!", 5f);
+    }
+
+    public void ContinuarJogoLivre()
+    {
+        if (!jogoEncerrado || !vitoria || jogoLivre)
+            return;
+        jogoLivre = true;
+        jogoEncerrado = false;
+        ExibirAviso("JOGO LIVRE: agora as ondas não acabam mais!", 4f);
+    }
+
+    public void FaseDoChefe(InimigoGaucho chefe, int fase)
+    {
+        if (chefe == null || jogoEncerrado)
+            return;
+        chefe.Blindar(2.5f);
+        Vector3 posicao = chefe.transform.position;
+        for (int i = 0; i < 2; i++)
+            CriarFilhote(chefe, TiposInimigo.Javali, posicao, i + 1);
+        TremerCamera(0.2f, 0.6f);
+        CriarAnel(posicao, 2.4f, new Color(1f, 0.4f, 0.2f, 0.9f), 0.5f);
+        ExibirAviso(fase == 1 ? "O REI JAVAPORCO CHAMOU REFORÇOS!" : "O REI JAVAPORCO SE ENFURECEU!", 3f);
     }
 
     void PagarRendas()
@@ -663,7 +824,7 @@ public sealed partial class JogoGaucho : MonoBehaviour
             Vector3 acima = torre.transform.position + Vector3.up * 0.6f;
             if (a.producao > 0)
             {
-                int valor = Mathf.RoundToInt(a.producao * a.multiplicadorProducao);
+                int valor = AjustarRenda(Mathf.RoundToInt(a.producao * a.multiplicadorProducao));
                 if (a.guaiaca)
                 {
                     int guardado = Mathf.RoundToInt(torre.Guardado * (1f + a.rendimento)) + valor;
@@ -672,7 +833,7 @@ public sealed partial class JogoGaucho : MonoBehaviour
                 }
                 else if (a.coletaAutomatica)
                 {
-                    pilas += valor;
+                    GanharPilas(valor);
                     AdicionarTexto(acima, "+" + valor + " pilas", new Color(1f, 0.86f, 0.25f));
                 }
                 else
@@ -680,8 +841,9 @@ public sealed partial class JogoGaucho : MonoBehaviour
             }
             if (a.pilasPorOnda > 0)
             {
-                pilas += a.pilasPorOnda;
-                AdicionarTexto(acima + Vector3.up * 0.3f, "+" + a.pilasPorOnda + " pilas", new Color(1f, 0.86f, 0.25f));
+                int extra = AjustarRenda(a.pilasPorOnda);
+                GanharPilas(extra);
+                AdicionarTexto(acima + Vector3.up * 0.3f, "+" + extra + " pilas", new Color(1f, 0.86f, 0.25f));
             }
             if (a.vidasPorOnda > 0)
             {
@@ -695,7 +857,7 @@ public sealed partial class JogoGaucho : MonoBehaviour
     {
         if (torre == null || torre.Guardado <= 0)
             return;
-        pilas += torre.Guardado;
+        GanharPilas(torre.Guardado);
         AdicionarTexto(torre.transform.position + Vector3.up * 0.6f, "+" + torre.Guardado + " pilas", new Color(1f, 0.86f, 0.25f));
         torre.Guardado = 0;
     }
@@ -708,8 +870,8 @@ public sealed partial class JogoGaucho : MonoBehaviour
         Vector3 posicao = inimigo.transform.position;
         int recompensa = inimigo.Definicao.recompensa + inimigo.BonusPilas;
         float bonus = bonusPilasGlobal + BonusDePilasNoPonto(posicao);
-        recompensa = Mathf.RoundToInt(recompensa * (1f + bonus));
-        pilas += recompensa;
+        recompensa = AjustarRenda(Mathf.RoundToInt(recompensa * (1f + bonus)));
+        GanharPilas(recompensa);
         eliminadosNoTotal++;
         if (origem != null)
             origem.Abatidos++;
@@ -734,6 +896,8 @@ public sealed partial class JogoGaucho : MonoBehaviour
             return;
         vidas = Mathf.Max(0, vidas - dano);
         EfeitosSonoros.DanoNoGalpao();
+        if (dano >= 10)
+            TremerCamera(0.12f, 0.3f);
         AdicionarTexto(posicao + Vector3.up * 0.5f, "-" + dano + " vida", new Color(1f, 0.3f, 0.25f));
         CriarEstouro(posicao, new Color(0.85f, 0.22f, 0.16f), 9, 0.12f);
 
@@ -747,24 +911,26 @@ public sealed partial class JogoGaucho : MonoBehaviour
             return;
         jogoEncerrado = true;
         vitoria = false;
-        ondaEmAndamento = false;
+        pausado = false;
+        ondasAtivas.Clear();
         tempo.Parar();
         velocidadeDoJogo = 1f;
         Time.timeScale = 1f;
         StopAllCoroutines();
         CancelarConstrucao();
-        RegistrarNoRanking();
+        if (!jogoLivre)
+            RegistrarNoRanking();
         EfeitosSonoros.Derrota();
         ExibirAviso(mensagem, 5f);
     }
 
     int CalcularPontuacao()
     {
-        int ondasVencidas = vitoria ? TotalOndas : Mathf.Max(0, ondaAtual - 1);
+        int ondasVencidas = vitoria ? TotalOndas : ondasConcluidas;
         int total = eliminadosNoTotal * 10 + ondasVencidas * 100;
         if (vitoria)
             total += 500 + vidas * 20 + Mathf.CeilToInt(tempo.Restante) * 2;
-        return Mathf.RoundToInt(total * dificuldade.multiplicadorPontuacao);
+        return Mathf.RoundToInt(total * dificuldade.multiplicadorPontuacao * modo.multiplicadorPontuacao);
     }
 
     void RegistrarNoRanking()
@@ -774,8 +940,9 @@ public sealed partial class JogoGaucho : MonoBehaviour
         {
             pontos = pontuacaoFinal,
             nivel = dificuldade.nome,
+            modo = this.modo.nome,
             vitoria = vitoria,
-            ondas = vitoria ? TotalOndas : Mathf.Max(0, ondaAtual - 1),
+            ondas = vitoria ? TotalOndas : ondasConcluidas,
             data = System.DateTime.Now.ToString("dd/MM HH:mm")
         });
     }
@@ -807,8 +974,9 @@ public sealed partial class JogoGaucho : MonoBehaviour
     {
         if (jogoEncerrado)
             return;
-        velocidadeDoJogo = velocidadeDoJogo < 1.5f ? 2f : 1f;
-        Time.timeScale = velocidadeDoJogo;
+        velocidadeDoJogo = velocidadeDoJogo >= 2.5f ? 1f : velocidadeDoJogo + 1f;
+        if (!pausado)
+            Time.timeScale = velocidadeDoJogo;
     }
 
     static int NumeroDoNome(string nome)

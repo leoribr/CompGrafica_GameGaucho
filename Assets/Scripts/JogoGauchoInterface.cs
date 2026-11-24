@@ -36,6 +36,7 @@ public sealed partial class JogoGaucho
     GUIStyle estiloAbaAtiva;
     GUIStyle estiloBotaoPerigo;
     GUIStyle estiloCentro;
+    GUIStyle estiloPequenoCentro;
     Texture2D texturaPainel;
     Texture2D texturaCaixa;
     Texture2D texturaBotao;
@@ -62,14 +63,18 @@ public sealed partial class JogoGaucho
 
         if (teclado.escapeKey.wasPressedThisFrame)
         {
-            if (escolhendoAlvo)
+            if (pausado)
+                AlternarPausa();
+            else if (escolhendoAlvo)
                 escolhendoAlvo = false;
             else if (construindo)
                 CancelarConstrucao();
             else if (selecionada != null)
                 selecionada = null;
-            else
+            else if (tutorialAberto)
                 tutorialAberto = false;
+            else if (!jogoEncerrado)
+                AlternarPausa();
         }
 
         if (jogoEncerrado)
@@ -78,13 +83,19 @@ public sealed partial class JogoGaucho
                 Reiniciar();
             else if (teclado.mKey.wasPressedThisFrame)
                 VoltarAoMenu();
+            else if (teclado.lKey.wasPressedThisFrame)
+                ContinuarJogoLivre();
             return;
         }
+        if (pausado)
+            return;
 
         if (teclado.spaceKey.wasPressedThisFrame)
             IniciarProximaOnda();
+        if (teclado.aKey.wasPressedThisFrame)
+            AlternarInicioAutomatico();
         if (teclado.tabKey.wasPressedThisFrame)
-            classeDaLoja = Classes[(System.Array.IndexOf(Classes, classeDaLoja) + 1) % Classes.Length];
+            TrocarClasse();
 
         Key[] numeros = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5, Key.Digit6, Key.Digit7 };
         List<DefinicaoTorre> atual = LojaDaClasse(classeDaLoja);
@@ -107,6 +118,18 @@ public sealed partial class JogoGaucho
             else if (teclado.pKey.wasPressedThisFrame)
                 CiclarPrioridade(selecionada);
         }
+    }
+
+    ClasseTorre[] ClassesDisponiveis()
+    {
+        return modo.soPeoes ? new[] { ClasseTorre.Peoes } : Classes;
+    }
+
+    void TrocarClasse()
+    {
+        ClasseTorre[] disponiveis = ClassesDisponiveis();
+        int indice = System.Array.IndexOf(disponiveis, classeDaLoja);
+        classeDaLoja = disponiveis[(indice + 1) % disponiveis.Length];
     }
 
     void CiclarPrioridade(TorreGaucha torre)
@@ -206,7 +229,10 @@ public sealed partial class JogoGaucho
         posicaoPreviaValida = PosicaoDeTorreValida(mundo, definicaoEmConstrucao) && !PonteiroSobreInterface(mouseTela);
         Color corPrevia = posicaoPreviaValida ? new Color(0.55f, 1f, 0.55f, 0.72f) : new Color(1f, 0.42f, 0.42f, 0.72f);
         foreach (SpriteRenderer sr in previaTorre.GetComponentsInChildren<SpriteRenderer>(true))
-            sr.color = corPrevia;
+        {
+            if (sr.name != "Sombra")
+                sr.color = corPrevia;
+        }
 
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
@@ -319,13 +345,19 @@ public sealed partial class JogoGaucho
         return new Rect(22f * e, 108f * e, 470f * e, 300f * e);
     }
 
+    Rect RectBotaoAutomatico(float e)
+    {
+        Rect onda = RectBotaoOnda(e);
+        return new Rect(onda.x, onda.y - 46f * e, onda.width, 40f * e);
+    }
+
     bool PonteiroSobreInterface(Vector2 mouseTela)
     {
         float e = EscalaUi();
         Vector2 gui = new Vector2(mouseTela.x, Screen.height - mouseTela.y);
-        if (jogoEncerrado)
+        if (jogoEncerrado || pausado)
             return true;
-        if (RectBarraSuperior(e).Contains(gui) || RectLoja(e).Contains(gui) || RectBotaoOnda(e).Contains(gui))
+        if (RectBarraSuperior(e).Contains(gui) || RectLoja(e).Contains(gui) || RectBotaoOnda(e).Contains(gui) || RectBotaoAutomatico(e).Contains(gui))
             return true;
         if (tutorialAberto && RectTutorial(e).Contains(gui))
             return true;
@@ -353,8 +385,9 @@ public sealed partial class JogoGaucho
         GUI.Label(new Rect(22f * e, 12f * e, 340f * e, 62f * e), "GAME GAÚCHO", estiloTitulo);
         GUI.Label(new Rect(390f * e, 17f * e, 220f * e, 52f * e), "VIDAS  " + vidas, estiloDestaque);
         GUI.Label(new Rect(625f * e, 17f * e, 260f * e, 52f * e), "PILAS  $" + pilas, estiloDestaque);
-        GUI.Label(new Rect(900f * e, 17f * e, 260f * e, 52f * e), "ONDA  " + ondaAtual + "/" + TotalOndas, estiloDestaque);
-        GUI.Label(new Rect(Screen.width - 330f * e, 17f * e, 185f * e, 52f * e), dificuldade.nome.ToUpperInvariant(), estiloDestaque);
+        string textoDaOnda = jogoLivre ? "ONDA  " + ondaAtual + " (LIVRE)" : "ONDA  " + ondaAtual + "/" + TotalOndas;
+        GUI.Label(new Rect(900f * e, 17f * e, 260f * e, 52f * e), textoDaOnda, estiloDestaque);
+        GUI.Label(new Rect(Screen.width - 460f * e, 17f * e, 185f * e, 52f * e), dificuldade.nome.ToUpperInvariant(), estiloDestaque);
 
         Color corAntes = estiloDestaque.normal.textColor;
         if (tempo.Ativo && tempo.Restante <= 30f)
@@ -362,27 +395,18 @@ public sealed partial class JogoGaucho
         GUI.Label(new Rect(1175f * e, 17f * e, 220f * e, 52f * e), "TEMPO  " + tempo.Formatado, estiloDestaque);
         estiloDestaque.normal.textColor = corAntes;
 
+        if (GUI.Button(new Rect(Screen.width - 262f * e, 16f * e, 120f * e, 50f * e), pausado ? "SEGUIR" : "PAUSA", estiloBotao))
+            AlternarPausa();
         if (GUI.Button(new Rect(Screen.width - 130f * e, 16f * e, 104f * e, 50f * e), "x" + velocidadeDoJogo.ToString("0"), estiloBotao))
             AlternarVelocidade();
 
+        bool habilitadoAntes = GUI.enabled;
+        GUI.enabled = habilitadoAntes && !pausado;
         DesenharLoja(e);
-
         if (selecionada != null && !jogoEncerrado)
             DesenharPainelMelhoria(e);
-
-        Rect botaoOnda = RectBotaoOnda(e);
-        if (!ondaEmAndamento && !jogoEncerrado)
-        {
-            string rotulo = ondaAtual == 0 ? "INICIAR ONDA 1" : "PRÓXIMA ONDA  " + (ondaAtual + 1);
-            if (GUI.Button(botaoOnda, rotulo + "   [ESPAÇO]", estiloBotao))
-                IniciarProximaOnda();
-        }
-        else if (ondaEmAndamento)
-        {
-            GUI.Box(botaoOnda, GUIContent.none, estiloPainel);
-            GUI.Label(new Rect(botaoOnda.x + 15f * e, botaoOnda.y + 13f * e, botaoOnda.width - 30f * e, 62f * e),
-                "ONDA EM CURSO\nBichos no campo: " + inimigosAtivos.Count, estiloCentro);
-        }
+        DesenharBotaoDaOnda(e);
+        GUI.enabled = habilitadoAntes;
 
         if (construindo)
         {
@@ -397,8 +421,10 @@ public sealed partial class JogoGaucho
         if (Time.unscaledTime < avisoAte)
             GUI.Label(new Rect(Screen.width * 0.5f - 420f * e, 102f * e, 840f * e, 54f * e), aviso, estiloCentro);
 
-        if (tutorialAberto && !jogoEncerrado)
+        if (tutorialAberto && !jogoEncerrado && !pausado)
             DesenharTutorial(e);
+        if (pausado)
+            DesenharPausa(e);
         if (jogoEncerrado)
             DesenharFimDeJogo(e);
 
@@ -406,18 +432,76 @@ public sealed partial class JogoGaucho
             DesenharDica(e, GUI.tooltip);
     }
 
+    void DesenharBotaoDaOnda(float e)
+    {
+        if (jogoEncerrado)
+            return;
+        Rect botaoOnda = RectBotaoOnda(e);
+        if (GUI.Button(RectBotaoAutomatico(e), "INÍCIO AUTOMÁTICO: " + (inicioAutomatico ? "SIM" : "NÃO") + "  [A]", estiloBotaoPequeno))
+            AlternarInicioAutomatico();
+
+        if (OndaEmAndamento)
+        {
+            if (TemProximaOnda)
+            {
+                if (GUI.Button(botaoOnda, "CHAMAR ONDA " + (ondaAtual + 1) + "  [ESPAÇO]\nBichos no campo: " + inimigosAtivos.Count, estiloBotao))
+                    IniciarProximaOnda();
+            }
+            else
+            {
+                GUI.Box(botaoOnda, GUIContent.none, estiloPainel);
+                GUI.Label(new Rect(botaoOnda.x + 15f * e, botaoOnda.y + 13f * e, botaoOnda.width - 30f * e, 62f * e),
+                    "ÚLTIMA ONDA EM CURSO\nBichos no campo: " + inimigosAtivos.Count, estiloCentro);
+            }
+        }
+        else if (TemProximaOnda)
+        {
+            string rotulo = ondaAtual == 0 ? "INICIAR ONDA 1" : "PRÓXIMA ONDA  " + (ondaAtual + 1);
+            if (GUI.Button(botaoOnda, rotulo + "   [ESPAÇO]", estiloBotao))
+                IniciarProximaOnda();
+        }
+    }
+
+    void DesenharPausa(float e)
+    {
+        Color antiga = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.45f);
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.color = antiga;
+
+        float largura = 520f * e;
+        float altura = 470f * e;
+        Rect painel = new Rect((Screen.width - largura) * 0.5f, (Screen.height - altura) * 0.5f, largura, altura);
+        GUI.Box(painel, GUIContent.none, estiloPainel);
+        float x = painel.x + 30f * e;
+        float w = painel.width - 60f * e;
+        GUI.Label(new Rect(x, painel.y + 18f * e, w, 60f * e), "PAUSADO", estiloTitulo);
+        GUI.Label(new Rect(x, painel.y + 76f * e, w, 30f * e), dificuldade.nome + "  |  Modo " + modo.nome + "  |  Onda " + ondaAtual, estiloPequeno);
+        float y = painel.y + 118f * e;
+        y += OpcoesGaucho.Desenhar(new Rect(x, y, w, 0f), estiloPequeno, estiloBotaoPequeno, e);
+        if (GUI.Button(new Rect(x, y, w, 56f * e), "CONTINUAR  [ESC]", estiloBotao))
+            AlternarPausa();
+        y += 66f * e;
+        float metade = (w - 10f * e) * 0.5f;
+        if (GUI.Button(new Rect(x, y, metade, 50f * e), "REINICIAR", estiloBotaoPerigo))
+            Reiniciar();
+        if (GUI.Button(new Rect(x + metade + 10f * e, y, metade, 50f * e), "MENU", estiloBotao))
+            VoltarAoMenu();
+    }
+
     void DesenharLoja(float e)
     {
         Rect painel = RectLoja(e);
         GUI.Box(painel, GUIContent.none, estiloPainel);
 
+        ClasseTorre[] disponiveis = ClassesDisponiveis();
         float abaLargura = (painel.width - 20f * e) / Classes.Length;
-        for (int i = 0; i < Classes.Length; i++)
+        for (int i = 0; i < disponiveis.Length; i++)
         {
             Rect aba = new Rect(painel.x + 10f * e + i * abaLargura, painel.y + 8f * e, abaLargura - 6f * e, 34f * e);
-            bool ativa = Classes[i] == classeDaLoja;
-            if (GUI.Button(aba, TiposTorre.NomeDaClasse(Classes[i]) + (ativa ? "  [TAB]" : ""), ativa ? estiloAbaAtiva : estiloBotaoPequeno))
-                classeDaLoja = Classes[i];
+            bool ativa = disponiveis[i] == classeDaLoja;
+            if (GUI.Button(aba, TiposTorre.NomeDaClasse(disponiveis[i]) + (ativa ? "  [TAB]" : ""), ativa ? estiloAbaAtiva : estiloBotaoPequeno))
+                classeDaLoja = disponiveis[i];
         }
 
         List<DefinicaoTorre> lista = LojaDaClasse(classeDaLoja);
@@ -427,7 +511,7 @@ public sealed partial class JogoGaucho
             DefinicaoTorre d = lista[i];
             Rect botao = new Rect(painel.x + 10f * e + i * largura, painel.y + 50f * e, largura - 6f * e, painel.height - 60f * e);
             bool habilitadoAntes = GUI.enabled;
-            GUI.enabled = !jogoEncerrado && pilas >= d.preco;
+            GUI.enabled = habilitadoAntes && !jogoEncerrado && pilas >= d.preco;
             string texto = "[" + (i + 1) + "]\n" + d.nome + "\n$" + d.preco;
             if (GUI.Button(botao, new GUIContent(texto, d.nome + ": " + d.descricao), estiloBotaoPequeno))
                 SelecionarConstrucao(d);
@@ -526,7 +610,11 @@ public sealed partial class JogoGaucho
         Rect b2 = new Rect(x + botaoLargura + 10f * e, y, botaoLargura, 38f * e);
         Rect b3 = new Rect(x + 2f * (botaoLargura + 10f * e), y, botaoLargura, 38f * e);
 
-        if (GUI.Button(b1, "VENDER  $" + venda + "  [V]", estiloBotaoPerigo))
+        bool habilitado = GUI.enabled;
+        GUI.enabled = habilitado && !modo.semVender;
+        bool vender = GUI.Button(b1, modo.semVender ? "SEM VENDA NO DESAFIO" : "VENDER  $" + venda + "  [V]", estiloBotaoPerigo);
+        GUI.enabled = habilitado;
+        if (vender)
         {
             Vender(t);
             return;
@@ -551,7 +639,7 @@ public sealed partial class JogoGaucho
         else if (t.Atributos.guaiaca)
         {
             bool habilitadoAntes = GUI.enabled;
-            GUI.enabled = t.Guardado > 0;
+            GUI.enabled = habilitadoAntes && t.Guardado > 0;
             if (GUI.Button(b3, "SACAR  $" + t.Guardado, estiloBotaoPequeno))
                 SacarGuaiaca(t);
             GUI.enabled = habilitadoAntes;
@@ -581,7 +669,7 @@ public sealed partial class JogoGaucho
         int custo = pode ? CustoDaMelhoria(t, c) : 0;
         string rotulo = pode ? "[" + TeclasDosCaminhos[c] + "]  $" + custo : MelhoriasTorre.Bloqueio(t.Niveis, c);
         bool habilitadoAntes = GUI.enabled;
-        GUI.enabled = pode && pilas >= custo;
+        GUI.enabled = habilitadoAntes && pode && pilas >= custo;
         if (GUI.Button(new Rect(r.x + 8f * e, r.yMax - 36f * e, r.width - 16f * e, 30f * e), rotulo, estiloBotaoPequeno))
             ComprarMelhoria(t, c);
         GUI.enabled = habilitadoAntes;
@@ -614,8 +702,8 @@ public sealed partial class JogoGaucho
         GUI.Label(new Rect(painel.x + 20f * e, painel.y + 56f * e, painel.width - 40f * e, 170f * e),
             "1. Escolha a classe (TAB) e contrate (1 a 7).\n" +
             "2. Clique no gaúcho: 3 caminhos de melhoria (Z, X, C), vender (V) e alvo (P).\n" +
-            "3. Inicie a onda (ESPAÇO).\n" +
-            "4. Furtivos só aparecem para quem vê furtivo. Blindados não sentem corte nem bala.",
+            "3. ESPAÇO inicia a onda e, durante ela, chama a próxima antes da hora. A liga o início automático.\n" +
+            "4. ESC pausa. Furtivos só aparecem para quem vê furtivo; blindados não sentem corte nem bala.",
             estiloPequeno);
         if (GUI.Button(new Rect(painel.x + 20f * e, painel.yMax - 64f * e, 170f * e, 48f * e), "ENTENDI", estiloBotao))
             tutorialAberto = false;
@@ -637,30 +725,72 @@ public sealed partial class JogoGaucho
         GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
         GUI.color = antiga;
 
-        float largura = 700f * e;
-        float altura = 330f * e;
+        float largura = 780f * e;
+        float altura = 440f * e;
         Rect painel = new Rect(Screen.width * 0.5f - largura * 0.5f, Screen.height * 0.5f - altura * 0.5f, largura, altura);
         GUI.Box(painel, GUIContent.none, estiloPainel);
-        GUI.Label(new Rect(painel.x + 30f * e, painel.y + 34f * e, painel.width - 60f * e, 75f * e),
-            vitoria ? "VITÓRIA NO PAMPA!" : derrotaPorTempo ? "O TEMPO ACABOU" : "O GALPÃO CAIU", estiloTitulo);
+        string titulo = jogoLivre ? "FIM DO JOGO LIVRE" : vitoria ? "VITÓRIA NO PAMPA!" : derrotaPorTempo ? "O TEMPO ACABOU" : "O GALPÃO CAIU";
+        GUI.Label(new Rect(painel.x + 30f * e, painel.y + 24f * e, painel.width - 60f * e, 70f * e), titulo, estiloTitulo);
         string mensagem;
-        if (vitoria)
+        if (jogoLivre)
+            mensagem = "Os bichos venceram na onda " + ondaAtual + ", " + Mathf.Max(0, ondasConcluidas - TotalOndas) + " ondas além da campanha.";
+        else if (vitoria)
             mensagem = "Você segurou todas as ondas e salvou a estância, com " + tempo.Formatado + " de sobra.";
         else if (derrotaPorTempo)
             mensagem = "As ondas não terminaram a tempo. Derrube os bichos mais rápido e tente de novo.";
         else
             mensagem = "Os bichos atravessaram a defesa. Reposicione os gaúchos e tente de novo.";
-        GUI.Label(new Rect(painel.x + 45f * e, painel.y + 105f * e, painel.width - 90f * e, 70f * e), mensagem, estiloCentro);
-        string pontuacao = "PONTUAÇÃO: " + pontuacaoFinal + "  (" + dificuldade.nome + ")";
+        GUI.Label(new Rect(painel.x + 45f * e, painel.y + 92f * e, painel.width - 90f * e, 62f * e), mensagem, estiloCentro);
+        string pontuacao = "PONTUAÇÃO: " + pontuacaoFinal + "  (" + dificuldade.nome + ", " + modo.nome + ")";
         if (posicaoNoRanking > 0)
             pontuacao += "  |  " + posicaoNoRanking + "º lugar no ranking!";
         GUI.color = new Color(1f, 0.86f, 0.35f);
-        GUI.Label(new Rect(painel.x + 45f * e, painel.y + 172f * e, painel.width - 90f * e, 40f * e), pontuacao, estiloCentro);
+        GUI.Label(new Rect(painel.x + 45f * e, painel.y + 156f * e, painel.width - 90f * e, 40f * e), pontuacao, estiloCentro);
         GUI.color = antiga;
-        if (GUI.Button(new Rect(painel.x + 50f * e, painel.y + 225f * e, 350f * e, 66f * e), "JOGAR DE NOVO  [R]", vitoria ? estiloBotao : estiloBotaoPerigo))
+        GUI.Label(new Rect(painel.x + 45f * e, painel.y + 204f * e, painel.width - 90f * e, 92f * e), TextoDasEstatisticas(), estiloPequenoCentro);
+
+        float y = painel.y + 330f * e;
+        bool podeLivre = vitoria && !jogoLivre;
+        float x = painel.x + 40f * e;
+        float w = painel.width - 80f * e;
+        float botao = podeLivre ? (w - 20f * e) / 3f : (w - 10f * e) / 2f;
+        if (podeLivre)
+        {
+            if (GUI.Button(new Rect(x, y, botao, 66f * e), "JOGO LIVRE  [L]", estiloBotao))
+                ContinuarJogoLivre();
+            x += botao + 10f * e;
+        }
+        if (GUI.Button(new Rect(x, y, botao, 66f * e), "JOGAR DE NOVO  [R]", vitoria ? estiloBotao : estiloBotaoPerigo))
             Reiniciar();
-        if (GUI.Button(new Rect(painel.x + 420f * e, painel.y + 225f * e, 230f * e, 66f * e), "MENU  [M]", estiloBotao))
+        x += botao + 10f * e;
+        if (GUI.Button(new Rect(x, y, botao, 66f * e), "MENU  [M]", estiloBotao))
             VoltarAoMenu();
+    }
+
+    string TextoDasEstatisticas()
+    {
+        Dictionary<string, int> abates = new Dictionary<string, int>(abatesDeVendidos);
+        foreach (TorreGaucha t in torres)
+        {
+            if (t == null || t.Ajudante)
+                continue;
+            int atual;
+            abates.TryGetValue(t.Definicao.nome, out atual);
+            abates[t.Definicao.nome] = atual + t.Abatidos;
+        }
+        List<KeyValuePair<string, int>> lista = new List<KeyValuePair<string, int>>(abates);
+        lista.Sort((a, b) => b.Value.CompareTo(a.Value));
+        string destaques = "";
+        for (int i = 0; i < lista.Count && i < 3; i++)
+        {
+            if (lista[i].Value <= 0)
+                break;
+            destaques += (destaques.Length > 0 ? ", " : "") + lista[i].Key + " (" + lista[i].Value + ")";
+        }
+        string texto = "Bichos derrubados: " + eliminadosNoTotal + "   |   Pilas ganhas: $" + pilasGanhas + "   |   Ondas vencidas: " + ondasConcluidas;
+        if (destaques.Length > 0)
+            texto += "\nQuem mais derrubou: " + destaques;
+        return texto;
     }
 
     void DesenharBarrasDeVida()
@@ -733,6 +863,7 @@ public sealed partial class JogoGaucho
         estiloMini = new GUIStyle(estiloTexto);
         estiloDestaque = new GUIStyle(estiloTexto) { fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
         estiloCentro = new GUIStyle(estiloTexto) { fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+        estiloPequenoCentro = new GUIStyle(estiloTexto) { alignment = TextAnchor.UpperCenter };
         estiloBotao = new GUIStyle(GUI.skin.button)
         {
             fontStyle = FontStyle.Bold,
@@ -760,6 +891,7 @@ public sealed partial class JogoGaucho
         estiloMini.fontSize = Mathf.RoundToInt(14f * e);
         estiloDestaque.fontSize = Mathf.RoundToInt(23f * e);
         estiloCentro.fontSize = Mathf.RoundToInt(20f * e);
+        estiloPequenoCentro.fontSize = Mathf.RoundToInt(17f * e);
         estiloBotao.fontSize = Mathf.RoundToInt(18f * e);
         estiloBotaoPequeno.fontSize = Mathf.RoundToInt(15f * e);
         estiloAbaAtiva.fontSize = estiloBotaoPequeno.fontSize;

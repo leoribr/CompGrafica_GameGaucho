@@ -8,6 +8,7 @@ public sealed class RegistroRanking
 {
     public int pontos;
     public string nivel;
+    public string modo;
     public bool vitoria;
     public int ondas;
     public string data;

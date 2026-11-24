@@ -1,9 +1,18 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering.Universal;
 
 public sealed partial class JogoGaucho
 {
+    sealed class LuzTemporaria
+    {
+        public Light2D luz;
+        public float inicio;
+        public float duracao;
+        public float intensidade;
+    }
+
     sealed class Zona
     {
         public SpriteRenderer visual;
@@ -73,6 +82,12 @@ public sealed partial class JogoGaucho
     readonly List<Anel> aneis = new List<Anel>();
     readonly List<Rastro_> rastros = new List<Rastro_>();
     readonly List<Fumaca> fumacas = new List<Fumaca>();
+    readonly List<LuzTemporaria> luzesTemporarias = new List<LuzTemporaria>();
+    readonly List<Light2D> luzesDeProjeteis = new List<Light2D>();
+    Vector3 posicaoDaCamera;
+    float tremorAte;
+    float tremorDuracao = 1f;
+    float tremorForca;
     Material materialParticula;
     Projetil moldeBala;
     Projetil moldeChumbo;
@@ -97,11 +112,132 @@ public sealed partial class JogoGaucho
         return lagoa != null && lagoa.Contem(posicao, margem);
     }
 
-    Material MaterialDeEfeito()
+    public Material MaterialDeEfeito()
     {
         if (materialParticula == null)
             materialParticula = new Material(Shader.Find("Sprites/Default"));
         return materialParticula;
+    }
+
+    public void PrepararLuz(Light2D luz, Color cor, float intensidade, float raio)
+    {
+        luz.lightType = Light2D.LightType.Point;
+        luz.color = new Color(cor.r, cor.g, cor.b, 1f);
+        luz.intensity = intensidade;
+        luz.pointLightOuterRadius = raio;
+        luz.pointLightInnerRadius = raio * 0.15f;
+        luz.falloffIntensity = 0.6f;
+        luz.targetSortingLayers = TodasAsCamadas();
+    }
+
+    static int[] TodasAsCamadas()
+    {
+        SortingLayer[] camadas = SortingLayer.layers;
+        int[] ids = new int[camadas.Length];
+        for (int i = 0; i < camadas.Length; i++)
+            ids[i] = camadas[i].id;
+        return ids;
+    }
+
+    void PrepararLuzes()
+    {
+        Light2D sol = null;
+        foreach (Light2D luz in FindObjectsByType<Light2D>(FindObjectsSortMode.None))
+        {
+            if (luz.lightType == Light2D.LightType.Global)
+            {
+                sol = luz;
+                break;
+            }
+        }
+        if (sol == null)
+        {
+            GameObject global = new GameObject("Luz global");
+            global.transform.SetParent(transform, false);
+            sol = global.AddComponent<Light2D>();
+            sol.lightType = Light2D.LightType.Global;
+        }
+        sol.color = new Color(1f, 0.96f, 0.9f);
+        sol.intensity = 0.82f;
+        sol.targetSortingLayers = TodasAsCamadas();
+
+        GameObject assado = GameObject.Find("Assado");
+        if (assado != null)
+            CriarLuzFixa("Luz do assado", assado.transform.position + new Vector3(0f, 0.2f, 0f), new Color(1f, 0.55f, 0.2f), 1.2f, 2.4f);
+        if (galpao != null)
+            CriarLuzFixa("Luz do galpao", galpao.position + new Vector3(0f, 0.3f, 0f), new Color(1f, 0.85f, 0.55f), 0.9f, 2.8f);
+    }
+
+    void CriarLuzFixa(string nome, Vector3 posicao, Color cor, float intensidade, float raio)
+    {
+        GameObject objeto = new GameObject(nome);
+        objeto.transform.SetParent(transform, false);
+        objeto.transform.position = new Vector3(posicao.x, posicao.y, 0f);
+        PrepararLuz(objeto.AddComponent<Light2D>(), cor, intensidade, raio);
+    }
+
+    public void CriarLuzTemporaria(Vector3 posicao, Color cor, float intensidade, float raio, float duracao)
+    {
+        if (luzesTemporarias.Count >= 12)
+            return;
+        GameObject objeto = new GameObject("Luz temporaria");
+        objeto.transform.SetParent(transform, false);
+        objeto.transform.position = new Vector3(posicao.x, posicao.y, 0f);
+        Light2D luz = objeto.AddComponent<Light2D>();
+        PrepararLuz(luz, cor, intensidade, raio);
+        luzesTemporarias.Add(new LuzTemporaria { luz = luz, inicio = Time.time, duracao = duracao, intensidade = intensidade });
+    }
+
+    void AtualizarLuzes()
+    {
+        for (int i = luzesTemporarias.Count - 1; i >= 0; i--)
+        {
+            LuzTemporaria l = luzesTemporarias[i];
+            float t = (Time.time - l.inicio) / l.duracao;
+            if (t >= 1f || l.luz == null)
+            {
+                if (l.luz != null)
+                    Destroy(l.luz.gameObject);
+                luzesTemporarias.RemoveAt(i);
+                continue;
+            }
+            l.luz.intensity = l.intensidade * (1f - t);
+        }
+    }
+
+    public void IluminarProjetil(Transform projetil, Color cor)
+    {
+        luzesDeProjeteis.RemoveAll(l => l == null);
+        if (luzesDeProjeteis.Count >= 14)
+            return;
+        GameObject objeto = new GameObject("Luz do projetil");
+        objeto.transform.SetParent(projetil, false);
+        Light2D luz = objeto.AddComponent<Light2D>();
+        PrepararLuz(luz, cor, 0.9f, 0.9f);
+        luzesDeProjeteis.Add(luz);
+    }
+
+    public void TremerCamera(float forca, float duracao)
+    {
+        if (Time.time < tremorAte && tremorForca > forca)
+            return;
+        tremorForca = forca;
+        tremorDuracao = Mathf.Max(0.05f, duracao);
+        tremorAte = Time.time + tremorDuracao;
+    }
+
+    void AtualizarTremor()
+    {
+        if (cameraPrincipal == null || pausado)
+            return;
+        if (Time.time < tremorAte)
+        {
+            float t = (tremorAte - Time.time) / tremorDuracao;
+            Vector2 desvio = Random.insideUnitCircle * tremorForca * t;
+            cameraPrincipal.transform.position = posicaoDaCamera + new Vector3(desvio.x, desvio.y, 0f);
+        }
+        else
+            cameraPrincipal.transform.position = posicaoDaCamera;
     }
 
     AtributosTorre VerTudo()
@@ -305,6 +441,9 @@ public sealed partial class JogoGaucho
         AfetarArea(centro, raio, a, dano, origem, cor, false);
         CriarEstouro(centro, cor, 14, raio * 0.5f);
         CriarAnel(centro, raio, cor, 0.22f);
+        CriarLuzTemporaria(centro, cor, 1.4f, raio * 1.8f + 0.4f, 0.28f);
+        if (raio >= 1.4f)
+            TremerCamera(Mathf.Min(0.14f, 0.03f + raio * 0.03f), 0.22f);
         if (a.revelaAoAcertar)
             RevelarArea(centro, raio);
     }
@@ -785,7 +924,7 @@ public sealed partial class JogoGaucho
             Pacote p = pacotes[k];
             if (p.visual == null || Vector2.Distance(p.visual.transform.position, mundo) > 0.45f)
                 continue;
-            pilas += p.valor;
+            GanharPilas(p.valor);
             AdicionarTexto(p.visual.transform.position + Vector3.up * 0.3f, "+" + p.valor + " pilas", new Color(1f, 0.86f, 0.25f));
             Destroy(p.visual.gameObject);
             pacotes.RemoveAt(k);
@@ -799,7 +938,7 @@ public sealed partial class JogoGaucho
         while (pacotes.Count > 0)
         {
             Pacote p = pacotes[0];
-            pilas += p.valor;
+            GanharPilas(p.valor);
             if (p.visual != null)
                 Destroy(p.visual.gameObject);
             pacotes.RemoveAt(0);

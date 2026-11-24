@@ -25,6 +25,7 @@ public sealed class DefinicaoInimigo
     public bool imuneLentidao;
     public bool chefe;
     public bool coroa;
+    public bool fasesDeChefe;
     public TipoDano[] imunidades = new TipoDano[0];
     public DefinicaoInimigo filho;
     public int quantidadeFilhos;
@@ -184,7 +185,7 @@ public static class TiposInimigo
     public static readonly DefinicaoInimigo ReiJavaporco = new DefinicaoInimigo
     {
         nome = "Rei Javaporco", desenho = "javali", cor = new Color(0.9f, 0.5f, 0.45f), escala = 2.4f, vida = 4000, velocidade = 0.18f,
-        recompensa = 500, danoNaBase = 999, peso = 99, categoria = CategoriaBicho.Grande, chefe = true, coroa = true, imuneLentidao = true,
+        recompensa = 500, danoNaBase = 999, peso = 99, categoria = CategoriaBicho.Grande, chefe = true, coroa = true, imuneLentidao = true, fasesDeChefe = true,
         filho = Javaporco, quantidadeFilhos = 1, filho2 = Jacare, quantidadeFilhos2 = 2,
         descricao = "O CHEFE: se chegar ao galpão, acabou"
     };

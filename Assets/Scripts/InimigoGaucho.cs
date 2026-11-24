@@ -37,7 +37,14 @@ public sealed class InimigoGaucho : MonoBehaviour
     int danoAcumulado;
     float proximoSoltar;
     float proximoAvisoImune;
+    SpriteRenderer sombra;
+    Material materialNormal;
+    bool piscando;
+    int faseDoChefe;
+    float blindadoAte;
 
+    public int Onda { get; set; }
+    public bool Blindado => Time.time < blindadoAte;
     public DefinicaoInimigo Definicao { get; private set; }
     public bool Furtivo { get; private set; }
     public bool Teimoso { get; private set; }
@@ -76,6 +83,10 @@ public sealed class InimigoGaucho : MonoBehaviour
         velocidade = Mathf.Max(0.05f, novaVelocidade);
         quadros = novosQuadros;
         renderizador = GetComponent<SpriteRenderer>();
+        materialNormal = renderizador != null ? renderizador.sharedMaterial : null;
+        piscando = false;
+        faseDoChefe = 0;
+        blindadoAte = 0f;
         proximoPonto = Mathf.Clamp(pontoSeguinte, 1, pontos.Length);
         quadroAtual = 0;
         finalizado = false;
@@ -91,8 +102,40 @@ public sealed class InimigoGaucho : MonoBehaviour
         if (renderizador != null && quadros != null && quadros.Length > 0 && quadros[0] != null)
             renderizador.sprite = quadros[0];
         AtualizarProgresso();
+        PrepararSombra();
         AtualizarCor();
         PrepararColisao();
+    }
+
+    void PrepararSombra()
+    {
+        if (sombra == null)
+        {
+            GameObject objeto = new GameObject("Sombra");
+            objeto.transform.SetParent(transform, false);
+            sombra = objeto.AddComponent<SpriteRenderer>();
+            sombra.sprite = SpritesGaucho.Circulo();
+            sombra.sortingOrder = 3;
+        }
+        Vector2 tamanho = renderizador != null && renderizador.sprite != null ? (Vector2)renderizador.sprite.bounds.size : Vector2.one;
+        sombra.transform.localPosition = new Vector3(0f, -tamanho.y * 0.42f, 0f);
+        sombra.transform.localScale = new Vector3(tamanho.x * 0.75f, tamanho.x * 0.26f, 1f);
+    }
+
+    public void Blindar(float duracao)
+    {
+        blindadoAte = Mathf.Max(blindadoAte, Time.time + duracao);
+    }
+
+    void ConferirFaseDoChefe()
+    {
+        if (!Definicao.fasesDeChefe || faseDoChefe >= 2)
+            return;
+        float limite = faseDoChefe == 0 ? 0.66f : 0.33f;
+        if (VidaNormalizada > limite)
+            return;
+        faseDoChefe++;
+        jogo.FaseDoChefe(this, faseDoChefe);
     }
 
     void PrepararColisao()
@@ -268,7 +311,9 @@ public sealed class InimigoGaucho : MonoBehaviour
 
         Color cor = corBase;
         float agora = Time.time;
-        if (agora < flashAte)
+        Material branco = SpritesGaucho.MaterialBranco();
+        bool flash = agora < flashAte;
+        if (flash && branco == null)
             cor = new Color(1f, 0.48f, 0.38f);
         else if (agora < paradoAte)
             cor *= congelado ? new Color(0.6f, 0.85f, 1f) : new Color(1f, 1f, 0.55f);
@@ -276,9 +321,20 @@ public sealed class InimigoGaucho : MonoBehaviour
             cor = Color.Lerp(cor, new Color(1f, 0.55f, 0.2f), 0.35f + Mathf.PingPong(agora * 4f, 0.3f));
         else if (LentidaoAtual > 0f)
             cor *= new Color(0.85f, 0.85f, 1f);
+        if (agora < blindadoAte)
+            cor = Color.Lerp(cor, new Color(1f, 0.84f, 0.3f), 0.45f + 0.25f * Mathf.PingPong(agora * 5f, 1f));
 
         cor.a = Furtivo ? 0.42f : 1f;
         renderizador.color = cor;
+
+        bool usarBranco = flash && branco != null;
+        if (usarBranco != piscando)
+        {
+            piscando = usarBranco;
+            renderizador.sharedMaterial = usarBranco ? branco : materialNormal;
+        }
+        if (sombra != null)
+            sombra.color = new Color(0f, 0f, 0f, Furtivo ? 0.12f : 0.3f);
     }
 
     public bool PodeAvisarImune()
@@ -293,6 +349,11 @@ public sealed class InimigoGaucho : MonoBehaviour
     {
         if (!EstaVivo || dano <= 0)
             return;
+        if (Time.time < blindadoAte)
+        {
+            jogo.AvisarImune(this);
+            return;
+        }
 
         vida -= dano;
         ultimoDano = Time.time;
@@ -311,7 +372,10 @@ public sealed class InimigoGaucho : MonoBehaviour
         }
 
         if (vida > 0)
+        {
+            ConferirFaseDoChefe();
             return;
+        }
         finalizado = true;
         jogo.InimigoEliminado(this, origem);
         Destroy(gameObject);

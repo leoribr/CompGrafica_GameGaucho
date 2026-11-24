@@ -68,6 +68,8 @@ public sealed class Projetil : MonoBehaviour
             renderizador.color = ataque.corProjetil;
         }
         Girar();
+        if (jogo != null && (ataque.tipoDano == TipoDano.Fogo || ataque.tipoDano == TipoDano.Magica))
+            jogo.IluminarProjetil(transform, JogoGaucho.CorDoTipo(ataque.tipoDano));
     }
 
     public void ConfigurarBumerangue(Vector3 alvoDoArremesso)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 public sealed class GrupoOnda
 {
@@ -27,7 +28,25 @@ public static class OndasGaucho
     public static GrupoOnda[] Onda(int numero)
     {
         Montar();
-        return ondas[numero - 1];
+        if (numero <= ondas.Count)
+            return ondas[numero - 1];
+        return OndaLivre(numero - ondas.Count);
+    }
+
+    static GrupoOnda[] OndaLivre(int extra)
+    {
+        List<GrupoOnda> grupos = new List<GrupoOnda>
+        {
+            G(TiposInimigo.Javali, 3 + extra, Mathf.Max(0.9f, 2.8f - extra * 0.1f)),
+            G(TiposInimigo.Capivara, 10 + extra * 2, 0.5f, 2f, extra % 2 == 0 ? "c" : "t"),
+            G(TiposInimigo.Jacare, 1 + extra / 2, 4f, 5f),
+            G(TiposInimigo.JavaliCinza, 1 + extra / 3, 6f, 8f)
+        };
+        if (extra % 3 == 0)
+            grupos.Add(G(TiposInimigo.Javaporco, extra / 3, 8f, 10f));
+        if (extra % 5 == 0)
+            grupos.Add(G(TiposInimigo.ReiJavaporco, 1, 1f, 12f));
+        return grupos.ToArray();
     }
 
     static GrupoOnda G(DefinicaoInimigo bicho, int quantidade, float espacamento, float inicio = 0f, string modificadores = "")

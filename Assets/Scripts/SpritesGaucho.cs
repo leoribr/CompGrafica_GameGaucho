@@ -7,6 +7,10 @@ public static class SpritesGaucho
 
     static readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
     static readonly Dictionary<string, Sprite[]> quadros = new Dictionary<string, Sprite[]>();
+    static Material materialContorno;
+    static Material materialBranco;
+    static Shader shaderDeEfeito;
+    static bool shaderProcurado;
 
     static readonly string[] Armas =
     {
@@ -111,10 +115,11 @@ public static class SpritesGaucho
         for (int i = 0; i < altura; i++)
             largura = Mathf.Max(largura, desenho[i].Length);
 
-        Texture2D textura = new Texture2D(largura, altura, TextureFormat.RGBA32, false);
+        Texture2D textura = new Texture2D(largura + 2, altura + 2, TextureFormat.RGBA32, false);
         textura.filterMode = FilterMode.Point;
         textura.wrapMode = TextureWrapMode.Clamp;
         textura.name = nome;
+        textura.SetPixels(new Color[(largura + 2) * (altura + 2)]);
         for (int y = 0; y < altura; y++)
         {
             string linha = desenho[altura - 1 - y];
@@ -128,11 +133,45 @@ public static class SpritesGaucho
                     cor = new Color(poncho.r * 0.5f, poncho.g * 0.5f, poncho.b * 0.5f);
                 if (c == '3' && lenco.a > 0f)
                     cor = lenco;
-                textura.SetPixel(x, y, cor);
+                textura.SetPixel(x + 1, y + 1, cor);
             }
         }
         textura.Apply();
-        return Sprite.Create(textura, new Rect(0f, 0f, largura, altura), pivo, PixelsPorUnidade);
+        Vector2 pivoComBorda = new Vector2((pivo.x * largura + 1f) / (largura + 2f), (pivo.y * altura + 1f) / (altura + 2f));
+        return Sprite.Create(textura, new Rect(0f, 0f, largura + 2, altura + 2), pivoComBorda, PixelsPorUnidade, 0, SpriteMeshType.FullRect);
+    }
+
+    public static Material MaterialContorno()
+    {
+        if (materialContorno == null && ShaderDeEfeito() != null)
+        {
+            materialContorno = new Material(shaderDeEfeito);
+            materialContorno.SetFloat("_Contorno", 1f);
+            materialContorno.SetColor("_CorContorno", new Color(1f, 0.86f, 0.3f, 1f));
+        }
+        return materialContorno;
+    }
+
+    public static Material MaterialBranco()
+    {
+        if (materialBranco == null && ShaderDeEfeito() != null)
+        {
+            materialBranco = new Material(shaderDeEfeito);
+            materialBranco.SetFloat("_Branco", 1f);
+        }
+        return materialBranco;
+    }
+
+    static Shader ShaderDeEfeito()
+    {
+        if (!shaderProcurado)
+        {
+            shaderProcurado = true;
+            shaderDeEfeito = Resources.Load<Shader>("SpriteEfeito");
+            if (shaderDeEfeito != null && !shaderDeEfeito.isSupported)
+                shaderDeEfeito = null;
+        }
+        return shaderDeEfeito;
     }
 
     static Color Hex(int rgb)
@@ -644,6 +683,7 @@ public static class SpritesGaucho
             case "arapuca": return new[] { "....k....", "...kbk...", "..kbkbk..", ".kbkbkbk.", "kbkbkbkbk", "bbbbbbbbb" };
             case "charque": return new[] { ".kkkkk.", "krRrRrk", "kRrwrRk", "krRrRrk", ".kkkkk." };
             case "coroa": return new[] { "y.y.y.y", "yYyYyYy", "yYYYYYy", "yyyyyyy" };
+            case "insignia": return new[] { "..k..", ".kwk.", "kwwwk", ".kwk.", "..k.." };
             case "canoa": return new[] { "k................k", "kbkkkkkkkkkkkkkkbk", ".kbbbbbbbbbbbbbbk.", "..kBBBBBBBBBBBBk..", "...kkkkkkkkkkkk..." };
             case "pandorga":
                 return new[]

@@ -6,6 +6,13 @@ public sealed class MusicaDeFundo : MonoBehaviour
     const float Volume = 0.35f;
 
     static MusicaDeFundo instancia;
+    static AudioSource fonte;
+
+    public static void AjustarVolume(float fator)
+    {
+        if (fonte != null)
+            fonte.volume = Volume * fator;
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Iniciar()
@@ -24,11 +31,12 @@ public sealed class MusicaDeFundo : MonoBehaviour
         DontDestroyOnLoad(objeto);
         instancia = objeto.AddComponent<MusicaDeFundo>();
 
-        AudioSource fonte = objeto.AddComponent<AudioSource>();
+        fonte = objeto.AddComponent<AudioSource>();
         fonte.clip = musica;
         fonte.loop = true;
-        fonte.volume = Volume;
         fonte.spatialBlend = 0f;
+        OpcoesGaucho.Carregar();
+        AjustarVolume(OpcoesGaucho.VolumeMusica);
         fonte.Play();
     }
 }
