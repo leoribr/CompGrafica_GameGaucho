@@ -6,7 +6,7 @@ Trabalho pratico da disciplina CCC300 - Computacao Grafica e Realidade Virtual (
 
 ## Downloads
 
-- **Executavel (Windows):** _[link do executavel aqui]_
+- **Executavel (Windows):** [GameGaucho_Windows.zip](https://github.com/leoribr/CompGrafica_GameGaucho/releases/latest/download/GameGaucho_Windows.zip) ([pagina da release](https://github.com/leoribr/CompGrafica_GameGaucho/releases/latest)): extraia a pasta e abra `GameGaucho.exe`.
 - **Video demonstrativo:** _[link do video aqui]_
 
 ## Como abrir e jogar
