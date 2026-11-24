@@ -10,12 +10,25 @@ public sealed class TorreGaucha : MonoBehaviour
     static readonly Color[] CoresDosCaminhos = { new Color(0.95f, 0.35f, 0.28f), new Color(0.35f, 0.6f, 0.98f), new Color(0.42f, 0.85f, 0.4f) };
 
     SpriteRenderer sombra;
-    SpriteRenderer insignia;
-    SpriteRenderer aura;
+    SpriteRenderer segundaArma;
+    SpriteRenderer chapeu;
+    SpriteRenderer pena;
+    SpriteRenderer oculos;
+    SpriteRenderer cinturao;
+    SpriteRenderer bandeira;
+    SpriteRenderer brilhoDaArma;
     SpriteRenderer clarao;
     Light2D luzDoTiro;
-    Material materialDoCorpo;
+    Transform pandorga2;
+    Vector3 pandorga2Base;
+    Material materialOriginal;
+    Material materialOriginalGinete;
+    Color corDoBrilho;
     Vector3 armaBase;
+    Vector3 segundaBase;
+    Vector3 armaEscalaBase = Vector3.one;
+    bool destacada;
+    int nivelVisual;
     float recuoAte;
     float claraoAte;
     float proximoBrilho;
@@ -144,6 +157,9 @@ public sealed class TorreGaucha : MonoBehaviour
         arma = transform.Find("Arma");
         armaRenderer = arma != null ? arma.GetComponent<SpriteRenderer>() : null;
         armaBase = arma != null ? arma.localPosition : Vector3.zero;
+        armaEscalaBase = arma != null ? arma.localScale : Vector3.one;
+        if (materialOriginal == null && corpoRenderer != null)
+            materialOriginal = corpoRenderer.sharedMaterial;
         PrepararSombra();
         if (Definicao.usaModeloDaCena)
             return;
@@ -176,6 +192,8 @@ public sealed class TorreGaucha : MonoBehaviour
         if (corpo == "cavalo")
         {
             gineteRenderer = CriarFilho("Ginete", SpritesGaucho.Gaucho(Definicao.corPoncho, Definicao.corLenco), new Vector3(0.05f, 0.55f, 0f), 0.75f, ordem + 1);
+            if (materialOriginalGinete == null)
+                materialOriginalGinete = gineteRenderer.sharedMaterial;
             if (arma != null)
             {
                 arma.localPosition = new Vector3(0.25f, 0.5f, 0f);
@@ -208,6 +226,33 @@ public sealed class TorreGaucha : MonoBehaviour
         sombra.color = new Color(0f, 0f, 0f, aviao ? 0.16f : 0.3f);
     }
 
+    bool CorpoDeGaucho()
+    {
+        string corpo = Definicao.corpo;
+        return corpo == "gaucho" || corpo == "pescador" || corpo == "domador" || corpo == "pia" || corpo == "cavalo";
+    }
+
+    SpriteRenderer Acessorio(SpriteRenderer atual, string nome, bool visivel, Transform suporte, int ordem, Color cor)
+    {
+        if (!visivel)
+        {
+            if (atual != null)
+                atual.enabled = false;
+            return atual;
+        }
+        if (atual == null)
+        {
+            GameObject objeto = new GameObject(nome);
+            objeto.transform.SetParent(suporte, false);
+            atual = objeto.AddComponent<SpriteRenderer>();
+            atual.sprite = SpritesGaucho.Pegar(nome);
+        }
+        atual.enabled = true;
+        atual.sortingOrder = ordem;
+        atual.color = cor;
+        return atual;
+    }
+
     void AtualizarVisualDeNivel()
     {
         if (EhPrevia || Ajudante || corpoRenderer == null)
@@ -218,36 +263,100 @@ public sealed class TorreGaucha : MonoBehaviour
             if (niveis[c] > niveis[caminho])
                 caminho = c;
         }
-        int nivel = niveis[caminho];
+        nivelVisual = niveis[caminho];
+        AtributosTorre a = Atributos;
+        AtributosTorre b = Definicao.CriarBasico();
+        Color corDoCaminho = CoresDosCaminhos[caminho];
+        SpriteRenderer pessoa = gineteRenderer != null ? gineteRenderer : corpoRenderer;
+        bool gaucho = CorpoDeGaucho();
 
-        if (nivel >= 3)
+        if (gaucho && (nivelVisual >= 3 || !Definicao.usaModeloDaCena))
         {
-            if (insignia == null)
-                insignia = CriarFilho("Insignia", SpritesGaucho.Pegar("insignia"), new Vector3(0.34f, 0.3f, 0f), 1f, corpoRenderer.sortingOrder + 3);
-            insignia.color = CoresDosCaminhos[caminho];
-            insignia.transform.localScale = Vector3.one * (nivel >= 4 ? 1.35f : 1f);
+            Color lenco = nivelVisual >= 5 ? new Color(1f, 0.8f, 0.22f) : Definicao.corLenco;
+            Color faixa = nivelVisual >= 3 ? corDoCaminho : Color.clear;
+            pessoa.sprite = SpritesGaucho.Gaucho(Definicao.corPoncho, lenco, faixa);
         }
 
-        if (!Definicao.usaModeloDaCena)
+        Transform suporte = pessoa.transform;
+        int ordem = pessoa.sortingOrder + 1;
+        Color corDoChapeu = new Color(corDoCaminho.r * 0.85f, corDoCaminho.g * 0.85f, corDoCaminho.b * 0.85f, 1f);
+        chapeu = Acessorio(chapeu, "chapeu", gaucho && nivelVisual >= 4, suporte, ordem, corDoChapeu);
+        pena = Acessorio(pena, "pena", gaucho && b.alcance > 0f && a.alcance >= b.alcance * 1.2f, suporte, ordem, Color.white);
+        oculos = Acessorio(oculos, "oculos", gaucho && a.veFurtivo && !b.veFurtivo, suporte, ordem, Color.white);
+        bool rapido = a.rajada > 1 || (b.intervalo > 0f && a.intervalo <= b.intervalo * 0.75f);
+        cinturao = Acessorio(cinturao, "cinturao", gaucho && rapido, suporte, ordem, Color.white);
+        bandeira = Acessorio(bandeira, "bandeira", !gaucho && nivelVisual >= 3, transform, corpoRenderer.sortingOrder + 2, corDoCaminho);
+        if (bandeira != null && bandeira.enabled)
         {
-            Color lenco = nivel >= 4 ? new Color(1f, 0.8f, 0.22f) : Definicao.corLenco;
-            string corpo = Definicao.corpo;
-            if (corpo == "gaucho" || corpo == "pescador" || corpo == "domador" || corpo == "pia")
-                corpoRenderer.sprite = SpritesGaucho.Gaucho(Definicao.corPoncho, lenco);
-            if (gineteRenderer != null)
-                gineteRenderer.sprite = SpritesGaucho.Gaucho(Definicao.corPoncho, lenco);
+            Bounds limites = corpoRenderer.sprite != null ? corpoRenderer.sprite.bounds : new Bounds(Vector3.zero, Vector3.one);
+            bandeira.transform.localPosition = new Vector3(limites.center.x + limites.extents.x * 0.55f, limites.center.y + limites.extents.y + 0.12f, 0f);
+            bandeira.transform.localScale = Vector3.one * (nivelVisual >= 4 ? 1.35f : 1f);
         }
 
-        if (nivel >= 5)
+        bool temArma = arma != null && armaRenderer != null && armaRenderer.enabled;
+        if (temArma)
         {
-            if (aura == null)
+            float forca = b.dano > 0 ? (float)a.dano / b.dano : 1f;
+            arma.localScale = armaEscalaBase * (forca >= 4f ? 1.35f : forca >= 2f ? 1.2f : 1f);
+            bool duas = a.armasNaMao >= 2 && Definicao.corpo != "pia";
+            if (duas && segundaArma == null)
             {
-                aura = CriarFilho("Aura", SpritesGaucho.Circulo(), Vector3.zero, 1.5f, 4);
-                if (jogo != null)
-                    aura.sharedMaterial = jogo.MaterialDeEfeito();
+                GameObject objeto = new GameObject("Arma2");
+                objeto.transform.SetParent(transform, false);
+                segundaArma = objeto.AddComponent<SpriteRenderer>();
             }
-            transform.localScale = Vector3.one * Definicao.escalaCorpo * 1.1f;
+            if (segundaArma != null)
+            {
+                segundaArma.enabled = duas;
+                segundaArma.sprite = armaRenderer.sprite;
+                segundaArma.sharedMaterial = armaRenderer.sharedMaterial;
+                segundaArma.sortingOrder = armaRenderer.sortingOrder;
+                segundaArma.transform.localScale = arma.localScale;
+                segundaBase = new Vector3(armaBase.x - 0.3f, armaBase.y - 0.12f, 0f);
+                segundaArma.transform.localPosition = segundaBase;
+            }
         }
+
+        bool ganhouQueima = a.queimaDano > b.queimaDano;
+        TipoDano elemento = ganhouQueima ? a.tipoQueima : a.tipoDano;
+        bool brilha = temArma && (ganhouQueima || a.tipoDano != b.tipoDano)
+            && (elemento == TipoDano.Fogo || elemento == TipoDano.Frio || elemento == TipoDano.Magica || elemento == TipoDano.Explosao);
+        if (brilha && brilhoDaArma == null)
+        {
+            GameObject objeto = new GameObject("Brilho da arma");
+            objeto.transform.SetParent(transform, false);
+            brilhoDaArma = objeto.AddComponent<SpriteRenderer>();
+            brilhoDaArma.sprite = SpritesGaucho.Circulo();
+            brilhoDaArma.transform.localScale = Vector3.one * 0.32f;
+            if (jogo != null)
+                brilhoDaArma.sharedMaterial = jogo.MaterialDeEfeito();
+        }
+        if (brilhoDaArma != null)
+        {
+            brilhoDaArma.enabled = brilha;
+            brilhoDaArma.sortingOrder = armaRenderer != null ? armaRenderer.sortingOrder + 1 : 8;
+            corDoBrilho = JogoGaucho.CorDoTipo(elemento);
+        }
+
+        if (Definicao.corpo == "pia" && a.armasNaMao >= 2 && pandorga2 == null)
+        {
+            pandorga2 = CriarFilho("Pandorga2", SpritesGaucho.Pegar("pandorga"), new Vector3(-0.55f, 1.05f, 0f), 1f, 27).transform;
+            pandorga2Base = pandorga2.localPosition;
+        }
+
+        if (nivelVisual >= 5)
+            transform.localScale = Vector3.one * Definicao.escalaCorpo * 1.1f;
+        AplicarMaterial();
+    }
+
+    void AplicarMaterial()
+    {
+        bool contornar = destacada || nivelVisual >= 5;
+        Material contorno = contornar ? SpritesGaucho.MaterialContorno(!destacada) : null;
+        if (corpoRenderer != null)
+            corpoRenderer.sharedMaterial = contorno != null ? contorno : materialOriginal;
+        if (gineteRenderer != null)
+            gineteRenderer.sharedMaterial = contorno != null ? contorno : materialOriginalGinete;
     }
 
     void EfeitoDeDisparo(AtributosTorre e)
@@ -278,17 +387,8 @@ public sealed class TorreGaucha : MonoBehaviour
 
     public void Destacar(bool ligado)
     {
-        Material contorno = SpritesGaucho.MaterialContorno();
-        if (corpoRenderer == null || contorno == null)
-            return;
-        if (ligado)
-        {
-            if (corpoRenderer.sharedMaterial != contorno)
-                materialDoCorpo = corpoRenderer.sharedMaterial;
-            corpoRenderer.sharedMaterial = contorno;
-        }
-        else if (materialDoCorpo != null)
-            corpoRenderer.sharedMaterial = materialDoCorpo;
+        destacada = ligado;
+        AplicarMaterial();
     }
 
     SpriteRenderer CriarFilho(string nome, Sprite sprite, Vector3 posicaoLocal, float escala, int ordem)
@@ -720,21 +820,32 @@ public sealed class TorreGaucha : MonoBehaviour
         if (arma != null)
         {
             float recuo = Time.time < recuoAte ? (recuoAte - Time.time) / 0.09f * 0.07f : 0f;
-            arma.localPosition = recuo > 0f ? armaBase + transform.InverseTransformVector(-arma.right * recuo) : armaBase;
+            Vector3 deslocamento = recuo > 0f ? transform.InverseTransformVector(-arma.right * recuo) : Vector3.zero;
+            arma.localPosition = armaBase + deslocamento;
+            if (segundaArma != null && segundaArma.enabled)
+            {
+                segundaArma.transform.localPosition = segundaBase + deslocamento;
+                segundaArma.transform.rotation = arma.rotation;
+                segundaArma.flipX = armaRenderer.flipX;
+                segundaArma.flipY = armaRenderer.flipY;
+            }
         }
         if (clarao != null)
             clarao.enabled = Time.time < claraoAte;
         if (luzDoTiro != null)
             luzDoTiro.enabled = Time.time < claraoAte;
-        if (aura != null)
+        if (brilhoDaArma != null && brilhoDaArma.enabled)
         {
-            aura.color = new Color(1f, 0.85f, 0.3f, 0.2f + 0.12f * Mathf.Sin(Time.time * 3f));
-            if (Time.time >= proximoBrilho)
-            {
-                proximoBrilho = Time.time + 1.3f;
-                jogo.CriarEstouro(transform.position + Vector3.up * 0.25f, new Color(1f, 0.9f, 0.4f), 3, 0.35f);
-            }
+            brilhoDaArma.transform.position = BocaDaArma();
+            brilhoDaArma.color = new Color(corDoBrilho.r, corDoBrilho.g, corDoBrilho.b, 0.55f + 0.25f * Mathf.Sin(Time.time * 6f));
         }
+        if (nivelVisual >= 5 && Time.time >= proximoBrilho)
+        {
+            proximoBrilho = Time.time + 1.3f;
+            jogo.CriarEstouro(transform.position + Vector3.up * 0.25f, new Color(1f, 0.9f, 0.4f), 3, 0.35f);
+        }
+        if (pandorga2 != null)
+            pandorga2.localPosition = pandorga2Base + new Vector3(Mathf.Sin(Time.time * 2f + 1.7f) * 0.1f, Mathf.Cos(Time.time * 1.6f + 1.7f) * 0.07f, 0f);
         if (sombra != null && Definicao.corpo == "aviao")
         {
             sombra.transform.position = transform.position + new Vector3(0.25f, -0.9f, 0f);
@@ -797,6 +908,11 @@ public sealed class TorreGaucha : MonoBehaviour
         float angulo = Mathf.Atan2(direcao.y, direcao.x) * Mathf.Rad2Deg;
         arma.rotation = Quaternion.Euler(0f, 0f, angulo);
         armaRenderer.flipY = direcao.x < 0f;
+        if (segundaArma != null)
+        {
+            segundaArma.transform.rotation = arma.rotation;
+            segundaArma.flipY = armaRenderer.flipY;
+        }
     }
 
     public Vector3 BocaDaArma()

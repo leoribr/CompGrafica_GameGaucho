@@ -57,7 +57,7 @@ public static class TorresPeoes
                 {
                     M("Cordas de Couro", "Bichos atingidos ficam 20% mais lentos por 1 s.", a => { a.lentidao = 0.2f; a.duracaoLentidao = 1f; }),
                     M("Enrosca-perna", "15% de chance de derrubar o bicho pequeno por 1 s.", a => { a.atordoar = 1f; a.chanceAtordoar = 0.15f; a.forca = 1; }),
-                    M("Boleadeira Dupla", "Joga 2 por vez e derruba também os especiais.", a => { a.quantidade = 2; a.abertura = 30f; a.forca = 2; }),
+                    M("Boleadeira Dupla", "Joga 2 por vez e derruba também os especiais.", a => { a.quantidade = 2; a.abertura = 30f; a.forca = 2; a.armasNaMao = 2; }),
                     M("Tombo Garantido", "Todo acerto derruba por 0,5 s e deixa 30% mais lento.", a => { a.chanceAtordoar = 1f; a.atordoar = 0.5f; a.lentidao = 0.3f; }),
                     M("Rei da Boleadeira", "Derruba até bichos grandes por 1 s.", a => { a.forca = 4; a.atordoar = 1f; })
                 },
@@ -305,7 +305,7 @@ public static class TorresPeoes
                 {
                     M("Pulso Firme", "Cadência +15%.", a => a.intervalo /= 1.15f),
                     M("Mão Rápida", "Cadência +33%.", a => a.intervalo /= 1.33f),
-                    M("Três Peixeiras", "Arremessa 3 peixeiras de uma vez.", a => { a.quantidade = 3; a.abertura = 12f; }),
+                    M("Três Peixeiras", "Arremessa 3 peixeiras de uma vez.", a => { a.quantidade = 3; a.abertura = 12f; a.armasNaMao = 2; }),
                     M("Mestre da Peixeira", "Cadência dobrada e peixeiras que furam blindagem.", a => { a.intervalo /= 2f; a.furaBlindagem = true; }),
                     M("Lenda da Faca", "6 peixeiras por vez, cadência dobrada e dano +1.", a => { a.quantidade = 6; a.abertura = 9f; a.intervalo /= 2f; a.dano += 1; })
                 },
@@ -440,7 +440,7 @@ public static class TorresPeoes
                 {
                     M("Cartuchos na Guaiaca", "Cadência +15%.", a => a.intervalo /= 1.15f),
                     M("Dedo Nervoso", "Cadência +30%.", a => a.intervalo /= 1.3f),
-                    M("Par de Garruchas", "Atira com duas armas ao mesmo tempo.", a => a.quantidade = 2),
+                    M("Par de Garruchas", "Atira com duas armas ao mesmo tempo.", a => { a.quantidade = 2; a.armasNaMao = 2; }),
                     M("Tambor Cheio", "Rajadas de 6 tiros antes de recarregar.", a => { a.rajada = 6; a.intervalo *= 2.2f; }),
                     M("Atirador da Fronteira", "Rajadas mais rápidas, dano +2 e fura blindagem.", a => { a.intervalo /= 1.5f; a.dano += 2; a.furaBlindagem = true; })
                 },

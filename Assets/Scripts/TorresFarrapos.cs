@@ -92,7 +92,7 @@ public static class TorresFarrapos
                 new[]
                 {
                     M("Arpão Afiado", "Dano +1.", a => a.dano += 1),
-                    M("Arpão Duplo", "2 arpões por vez.", a => { a.quantidade = 2; a.abertura = 10f; }),
+                    M("Arpão Duplo", "2 arpões por vez.", a => { a.quantidade = 2; a.abertura = 10f; a.armasNaMao = 2; }),
                     M("Arpão de Baleeiro", "Dano +3 e fura blindagem.", a => { a.dano += 3; a.furaBlindagem = true; }),
                     M("Arpão com Corda", "A cada 6 s puxa um bicho grande para trás.", a =>
                     {

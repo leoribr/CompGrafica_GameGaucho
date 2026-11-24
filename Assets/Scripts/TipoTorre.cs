@@ -100,6 +100,7 @@ public sealed class AtributosTorre
     public float abertura;
     public int alvos = 1;
     public int rajada = 1;
+    public int armasNaMao = 1;
     public bool teleguiado;
     public bool tiroTraseiro;
     public bool lateraisMetade;

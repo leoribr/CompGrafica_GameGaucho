@@ -7,7 +7,8 @@ public static class SpritesGaucho
 
     static readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
     static readonly Dictionary<string, Sprite[]> quadros = new Dictionary<string, Sprite[]>();
-    static Material materialContorno;
+    static Material materialSelecao;
+    static Material materialDourado;
     static Material materialBranco;
     static Shader shaderDeEfeito;
     static bool shaderProcurado;
@@ -73,13 +74,42 @@ public static class SpritesGaucho
 
     public static Sprite Gaucho(Color poncho, Color lenco)
     {
+        return Gaucho(poncho, lenco, Color.clear);
+    }
+
+    public static Sprite Gaucho(Color poncho, Color lenco, Color faixa)
+    {
         string chave = "gaucho" + ColorUtility.ToHtmlStringRGB(poncho) + ColorUtility.ToHtmlStringRGB(lenco);
+        if (faixa.a > 0f)
+            chave += ColorUtility.ToHtmlStringRGB(faixa);
         Sprite sprite;
         if (sprites.TryGetValue(chave, out sprite))
             return sprite;
-        sprite = Criar(DesenhoGaucho, chave, new Vector2(0.5f, 0.5f), poncho, lenco);
+        string[] desenho = DesenhoGaucho;
+        if (faixa.a > 0f)
+        {
+            desenho = (string[])DesenhoGaucho.Clone();
+            desenho[11] = desenho[11].Replace('7', 'X');
+        }
+        sprite = Criar(desenho, chave, new Vector2(0.5f, 0.5f), poncho, lenco, faixa);
         sprites[chave] = sprite;
         return sprite;
+    }
+
+    static string[] Camada(int primeira, params string[] linhas)
+    {
+        string[] desenho = new string[16];
+        for (int i = 0; i < 16; i++)
+            desenho[i] = i >= primeira && i - primeira < linhas.Length ? linhas[i - primeira] : "................";
+        return desenho;
+    }
+
+    static string[] CamadaLarga(params string[] linhas)
+    {
+        string[] desenho = new string[20];
+        for (int i = 0; i < 20; i++)
+            desenho[i] = i < linhas.Length ? linhas[i] : "....................";
+        return desenho;
     }
 
     public static Sprite Circulo()
@@ -108,7 +138,7 @@ public static class SpritesGaucho
         return sprite;
     }
 
-    static Sprite Criar(string[] desenho, string nome, Vector2 pivo, Color poncho, Color lenco)
+    static Sprite Criar(string[] desenho, string nome, Vector2 pivo, Color poncho, Color lenco, Color extra = default)
     {
         int altura = desenho.Length;
         int largura = 0;
@@ -133,6 +163,8 @@ public static class SpritesGaucho
                     cor = new Color(poncho.r * 0.5f, poncho.g * 0.5f, poncho.b * 0.5f);
                 if (c == '3' && lenco.a > 0f)
                     cor = lenco;
+                if (c == 'X')
+                    cor = extra;
                 textura.SetPixel(x + 1, y + 1, cor);
             }
         }
@@ -141,15 +173,27 @@ public static class SpritesGaucho
         return Sprite.Create(textura, new Rect(0f, 0f, largura + 2, altura + 2), pivoComBorda, PixelsPorUnidade, 0, SpriteMeshType.FullRect);
     }
 
-    public static Material MaterialContorno()
+    public static Material MaterialContorno(bool dourado)
     {
-        if (materialContorno == null && ShaderDeEfeito() != null)
+        if (ShaderDeEfeito() == null)
+            return null;
+        if (dourado)
         {
-            materialContorno = new Material(shaderDeEfeito);
-            materialContorno.SetFloat("_Contorno", 1f);
-            materialContorno.SetColor("_CorContorno", new Color(1f, 0.86f, 0.3f, 1f));
+            if (materialDourado == null)
+                materialDourado = NovoContorno(new Color(1f, 0.78f, 0.2f, 1f));
+            return materialDourado;
         }
-        return materialContorno;
+        if (materialSelecao == null)
+            materialSelecao = NovoContorno(Color.white);
+        return materialSelecao;
+    }
+
+    static Material NovoContorno(Color cor)
+    {
+        Material material = new Material(shaderDeEfeito);
+        material.SetFloat("_Contorno", 1f);
+        material.SetColor("_CorContorno", cor);
+        return material;
     }
 
     public static Material MaterialBranco()
@@ -683,7 +727,11 @@ public static class SpritesGaucho
             case "arapuca": return new[] { "....k....", "...kbk...", "..kbkbk..", ".kbkbkbk.", "kbkbkbkbk", "bbbbbbbbb" };
             case "charque": return new[] { ".kkkkk.", "krRrRrk", "kRrwrRk", "krRrRrk", ".kkkkk." };
             case "coroa": return new[] { "y.y.y.y", "yYyYyYy", "yYYYYYy", "yyyyyyy" };
-            case "insignia": return new[] { "..k..", ".kwk.", "kwwwk", ".kwk.", "..k.." };
+            case "chapeu": return Camada(0, "....wwwwwwww....", "...wwwwwwwwww...");
+            case "pena": return CamadaLarga("................r...", "...............rw...", "..............rw....", ".............rw.....");
+            case "bandeira": return new[] { "kwwww", "kwwww", "kwww.", "kww..", "k....", "k....", "k...." };
+            case "oculos": return Camada(7, "....kyayyyayk...");
+            case "cinturao": return Camada(10, "....By..........", "......yBy.......", ".........ByB....");
             case "canoa": return new[] { "k................k", "kbkkkkkkkkkkkkkkbk", ".kbbbbbbbbbbbbbbk.", "..kBBBBBBBBBBBBk..", "...kkkkkkkkkkkk..." };
             case "pandorga":
                 return new[]

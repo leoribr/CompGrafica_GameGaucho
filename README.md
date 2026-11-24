@@ -78,9 +78,10 @@ A tela final mostra os bichos derrubados, as pilas ganhas, as ondas vencidas e o
 
 - Pixel art de gauchos, bichos, armas e projeteis gerada em codigo (`SpritesGaucho.cs`).
 - Iluminacao 2D do URP: luz global, luzes no assado e no galpao e clarao nas explosoes, nos tiros e nos projeteis de fogo e magica.
-- Shader proprio (`Assets/Resources/SpriteEfeito.shader`): contorno no gaucho selecionado e piscar branco quando o bicho apanha.
+- Shader proprio (`Assets/Resources/SpriteEfeito.shader`): contorno branco no gaucho selecionado, contorno dourado no nivel 5 e piscar branco quando o bicho apanha.
 - Sombras embaixo de bichos e gauchos, recuo da arma no tiro e tremor de camera nas explosoes grandes e na chegada dos chefes.
-- O gaucho muda com as melhorias: insignia com a cor do caminho no nivel 3, detalhe dourado no nivel 4 e aura com brilho no nivel 5.
+- O gaucho muda com as melhorias, no estilo do Bloons TD 6: duas armas quando a melhoria da duas (como o Par de Garruchas), cinturao de balas quando o tiro fica mais rapido, pena quando o alcance cresce, oculos quando passa a ver furtivo, arma maior quando o dano dobra e brilho na arma quando ganha fogo, frio ou magica.
+- Pelo nivel: faixa no poncho com a cor do caminho no nivel 3, chapeu dessa cor no nivel 4 e, no nivel 5, contorno dourado, lenco dourado e brilhos. Corpos que nao sao gaucho ganham uma bandeirola.
 
 ## Efeitos sonoros
 

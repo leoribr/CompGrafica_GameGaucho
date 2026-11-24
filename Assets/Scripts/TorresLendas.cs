@@ -239,7 +239,7 @@ public static class TorresLendas
                 new[]
                 {
                     M("Bota de Ferro", "Alcance +20%.", a => a.alcance *= 1.2f),
-                    M("Dois Braços", "Ataca 2 bichos ao mesmo tempo.", a => a.alvos = 2),
+                    M("Dois Braços", "Ataca 2 bichos ao mesmo tempo.", a => { a.alvos = 2; a.armasNaMao = 2; }),
                     M("Gaúcho de Lata", "Um dos braços solta um raio a cada 1 s (pula 4 bichos).", a =>
                     {
                         Especial e = a.Pegar(TipoEspecial.Disparo, "raio");
@@ -612,7 +612,7 @@ public static class TorresLendas
                 },
                 new[]
                 {
-                    M("Duas Pandorgas", "2 rajadas por vez.", a => { a.quantidade = 2; a.abertura = 12f; }),
+                    M("Duas Pandorgas", "2 rajadas por vez.", a => { a.quantidade = 2; a.abertura = 12f; a.armasNaMao = 2; }),
                     M("Pandorga Grande", "Perfuração +3.", a => a.perfuracao += 3),
                     M("Festival de Pandorgas", "4 rajadas por vez.", a => { a.quantidade = 4; a.abertura = 12f; }),
                     M("Pandorga Rasante", "Vê furtivo e +2 de dano neles.", a => { a.veFurtivo = true; a.danoExtraFurtivos += 2; }),
@@ -654,7 +654,7 @@ public static class TorresLendas
                 {
                     M("Pé Ligeiro", "Cadência +40%.", a => a.intervalo /= 1.4f),
                     M("Rosetas Afiadas", "Perfuração +2 e dano +1.", a => { a.perfuracao += 2; a.dano += 1; }),
-                    M("Sapateado Duplo", "2 rosetas por vez.", a => { a.quantidade = 2; a.abertura = 10f; }),
+                    M("Sapateado Duplo", "2 rosetas por vez.", a => { a.quantidade = 2; a.abertura = 10f; a.armasNaMao = 2; }),
                     M("Mestre da Chula", "4 rosetas por vez e cadência +50%.", a => { a.quantidade = 4; a.abertura = 9f; a.intervalo /= 1.5f; }),
                     M("Lenda do Sapateado", "Rosetas gigantes que vão e voltam: dano +5 e perfuração +10.", a =>
                     {
